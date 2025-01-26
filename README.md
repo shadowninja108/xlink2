@@ -4,6 +4,8 @@ editing technically works but you'd need to do it all in code
 
 serialization is almost byte perfect if I could just figure out how they sorted duplicate asset keys...
 
+thanks shadow for your research most of this is based off of (https://github.com/shadowninja108/woomlink)
+
 anyways, how does this file work?
 
 xlink2 is Nintendo EPD's library that handles the emission of sounds and effects (via SLink and ELink, respectively) - this file acts as a database that defines how the xlink2 system will behave (it's xlink2 because the old version of the library is called xlink or something)
