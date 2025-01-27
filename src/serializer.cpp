@@ -73,7 +73,7 @@ const xlink2::ResourceHeader Serializer::calcOffsets() {
                 conditionTableSize += sizeof(xlink2::ResRandomCondition2);
                 break;
             case xlink2::ContainerType::Blend:
-                conditionTableSize += sizeof(xlink2::ResBlendCondition2);
+                conditionTableSize += sizeof(xlink2::ResBlendCondition);
                 break;
             case xlink2::ContainerType::Sequence:
                 conditionTableSize += sizeof(xlink2::ResSequenceCondition);
@@ -289,9 +289,13 @@ void Serializer::writePDT() {
 }
 
 void Serializer::writeParam(const Param& param) {
-    u32 val = param.value & 0xffffff;
+    u32 val;
     if (param.type == xlink2::ValueReferenceType::ArrangeParam) {
-        val = static_cast<u32>(mArrangeGroupParamOffsets.at(val));
+        val = static_cast<u32>(mArrangeGroupParamOffsets.at(std::get<u32>(param.value)));
+    } else if (param.type == xlink2::ValueReferenceType::String) {
+        val = static_cast<u32>(mStringOffsets.at(std::get<std::string_view>(param.value)));
+    } else {
+        val = std::get<u32>(param.value);
     }
     write(static_cast<u32>(param.type) << 0x18 | (val & 0xffffff));
 }
@@ -742,7 +746,7 @@ void Serializer::serialize() {
             }
             case xlink2::ContainerType::Blend: {
                 const auto param = condition.getAs<xlink2::ContainerType::Blend>();
-                const xlink2::ResBlendCondition2 res = {
+                const xlink2::ResBlendCondition res = {
                     {
                         .type = static_cast<u32>(condition.parentContainerType),
                     },

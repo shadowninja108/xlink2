@@ -8,6 +8,8 @@
 #include "condition.h"
 #include "arrange.h"
 
+#include "util/yaml.h"
+
 // this is not xlink2::System so we're clear
 
 namespace banana {
@@ -29,6 +31,9 @@ public:
 
     const Random& getRandomCall(s32) const;
     Random& getRandomCall(s32);
+
+    const ArrangeGroupParams& getArrangeGroupParams(s32) const;
+    ArrangeGroupParams& getArrangeGroupParams(s32);
 
     const ParamSet& getTriggerOverwriteParam(s32) const;
     ParamSet& getTriggerOverwriteParam(s32);
@@ -63,9 +68,25 @@ public:
 
     std::vector<u8> serialize();
 
+    std::string dumpYAML() const;
+    std::string dumpUser(u32) const;
+
     friend class Serializer;
 
 private:
+    inline void dumpParam(LibyamlEmitterWithStorage<std::string>&, const Param&, ParamType) const;
+    inline void dumpParamSet(LibyamlEmitterWithStorage<std::string>&, const ParamSet&, ParamType) const;
+    inline void dumpCondition(LibyamlEmitterWithStorage<std::string>&, const Condition&) const;
+    inline void dumpContainer(LibyamlEmitterWithStorage<std::string>&, const Container&) const;
+    inline void dumpAssetCallTable(LibyamlEmitterWithStorage<std::string>&, const AssetCallTable&) const;
+    inline void dumpActionSlot(LibyamlEmitterWithStorage<std::string>&, const ActionSlot&) const;
+    inline void dumpAction(LibyamlEmitterWithStorage<std::string>&, const Action&) const;
+    inline void dumpActionTrigger(LibyamlEmitterWithStorage<std::string>&, const ActionTrigger&) const;
+    inline void dumpProperty(LibyamlEmitterWithStorage<std::string>&, const Property&) const;
+    inline void dumpPropertyTrigger(LibyamlEmitterWithStorage<std::string>&, const PropertyTrigger&) const;
+    inline void dumpAlwaysTrigger(LibyamlEmitterWithStorage<std::string>&, const AlwaysTrigger&) const;
+    inline void dumpUser(LibyamlEmitterWithStorage<std::string>&, const User&) const;
+
     ParamDefineTable mPDT;
     std::set<std::string> mStrings;
     std::vector<std::string_view> mLocalProperties;

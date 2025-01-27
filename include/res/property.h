@@ -2,6 +2,8 @@
 
 #include "util/types.h"
 
+#include <string>
+
 namespace xlink2 {
 
 enum class CompareType {

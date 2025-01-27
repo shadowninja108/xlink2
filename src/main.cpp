@@ -54,15 +54,18 @@ int main(int argc, char** argv) {
     banana::System system;
     system.initialize(buffer.data(), buffer.size());
 
-    system.getPDT().printParams();
+    // system.getPDT().printParams();
 
-    system.printUser("Player");
+    // system.printUser("Player");
 
-    auto data = system.serialize();
+    // auto data = system.serialize();
 
-    util::writeFile("out.bin", data, false);
-    auto dict = archive.getFile("zs.zsdic");
-    util::writeFile("out.bin.zs", data, true, {dict.data(), dict.size()});
+    // util::writeFile("out.bin", data, false);
+    // auto dict = archive.getFile("zs.zsdic");
+    // util::writeFile("out.bin.zs", data, true, {dict.data(), dict.size()});
+
+    auto yaml = system.dumpYAML();
+    util::writeFile("out.yaml", {reinterpret_cast<const u8*>(yaml.data()), yaml.size()}, false);
 
     return 0;
 }

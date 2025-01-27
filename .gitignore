@@ -60,3 +60,5 @@ build/*
 *.bslnk
 *.zs
 *.bin
+*.yaml
+*.yml

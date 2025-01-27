@@ -195,4 +195,58 @@ s32 ParamDefineTable::searchParamIndex(const std::string_view& name, ParamType t
     }
 }
 
+void ParamDefine::dumpYAML(LibyamlEmitterWithStorage<std::string>& emitter) const {
+    emitter.EmitString(mName);
+
+    switch (mType) {
+        case xlink2::ParamType::Int:
+            emitter.EmitInt(std::get<int>(mDefaultValue));
+            break;
+        case xlink2::ParamType::Float:
+            emitter.EmitFloat(std::get<float>(mDefaultValue));
+            break;
+        case xlink2::ParamType::Bool:
+            emitter.EmitBool(std::get<bool>(mDefaultValue));
+            break;
+        case xlink2::ParamType::Enum:
+            emitter.EmitScalar(std::format("{:#010x}", std::get<u32>(mDefaultValue)), false, false, "!u");
+            break;
+        case xlink2::ParamType::String:
+            emitter.EmitString(std::get<std::string_view>(mDefaultValue));
+            break;
+        case xlink2::ParamType::Bitfield:
+            emitter.EmitScalar(std::format("{:#b}", std::get<u32>(mDefaultValue)), false, false, "!bitfield");
+            break;
+        default:
+            throw InvalidDataError("Invalid param define type");
+    }
+}
+
+void ParamDefineTable::dumpYAML(LibyamlEmitterWithStorage<std::string>& emitter) const {
+    emitter.EmitString("ParamDefineTable");
+
+    LibyamlEmitter::MappingScope scope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
+    {
+        emitter.EmitString("UserParamDefines");
+        LibyamlEmitter::MappingScope scope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
+        for (const auto& define : mUserParams) {
+            define.dumpYAML(emitter);
+        }
+    }
+    {
+        emitter.EmitString("AssetParamDefines");
+        LibyamlEmitter::MappingScope scope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
+        for (const auto& define : mAssetParams) {
+            define.dumpYAML(emitter);
+        }
+    }
+    {
+        emitter.EmitString("TriggerParamDefines");
+        LibyamlEmitter::MappingScope scope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
+        for (const auto& define : mTriggerParams) {
+            define.dumpYAML(emitter);
+        }
+    }
+}
+
 } // namespace banana

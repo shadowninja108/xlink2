@@ -11,7 +11,7 @@ enum class ParamType {
     Bool = 2,
     Enum = 3,
     String = 4,
-    Bitfield = 5,
+    Bitfield = 5, // might be more akin to custom actually
 };
 
 // the Random types + Curve are only valid for floats

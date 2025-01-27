@@ -55,9 +55,7 @@ struct ResRandomCondition : public ResCondition {
 
 struct ResRandomCondition2 : public ResRandomCondition {};
 
-struct ResBlendCondition : public ResCondition {};
-
-struct ResBlendCondition2 : public ResCondition {
+struct ResBlendCondition : public ResCondition {
     float min;
     float max;
     u8 blendTypeToMax;

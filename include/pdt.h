@@ -2,6 +2,7 @@
 
 #include "resource.h"
 #include "accessor.h"
+#include "util/yaml.h"
 
 #include <set>
 #include <string>
@@ -55,6 +56,8 @@ public:
 
     void print() const;
 
+    void dumpYAML(LibyamlEmitterWithStorage<std::string>&) const;
+
     friend class Serializer;
 
 private:
@@ -102,6 +105,8 @@ public:
     }
 
     s32 searchParamIndex(const std::string_view&, ParamType) const;
+
+    void dumpYAML(LibyamlEmitterWithStorage<std::string>&) const;
 
     friend class Serializer;
 
