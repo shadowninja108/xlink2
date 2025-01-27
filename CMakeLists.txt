@@ -83,6 +83,8 @@ target_sources(xlink_tool PRIVATE
     include/user.h
     include/value.h
 
+    include/usernames.inc
+
     src/accessor.cpp
     src/pdt.cpp
     src/serializer.cpp

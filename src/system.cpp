@@ -3,6 +3,8 @@
 #include "util/error.h"
 #include "util/crc32.h"
 
+#include "usernames.inc"
+
 #include <bit>
 #include <iostream>
 #include <format>
@@ -1119,7 +1121,12 @@ std::string System::dumpYAML() const {
             emitter.EmitString("Users");
             LibyamlEmitter::MappingScope seqScope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
             for (const auto& [hash, user] : mUsers) {
-                emitter.EmitScalar(std::format("{:#010x}", hash), false, false, "!u");
+                const auto res = mVersion == 0x24 ? sELinkUserNames.find(hash) : sSLinkUserNames.find(hash);
+                if (res == (mVersion == 0x24 ? sELinkUserNames.end() : sSLinkUserNames.end())) {
+                    emitter.EmitScalar(std::format("{:#010x}", hash), false, false, "!u");
+                } else {
+                    emitter.EmitString(res->second);
+                }
                 dumpUser(emitter, user);
             }
         }

@@ -28,8 +28,12 @@ int main(int argc, char** argv) {
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
+    std::cout << "Starting\n";
+
     std::string filepath = parseInput(argc, argv, 0);
     std::string dictPath = parseInput(argc, argv, 1);
+
+    std::cout << "Loading files\n";
 
     util::Archive archive;
     if (!archive.loadArchive(dictPath)) {
@@ -51,6 +55,8 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    std::cout << "Parsing file\n";
+
     banana::System system;
     system.initialize(buffer.data(), buffer.size());
 
@@ -64,8 +70,12 @@ int main(int argc, char** argv) {
     // auto dict = archive.getFile("zs.zsdic");
     // util::writeFile("out.bin.zs", data, true, {dict.data(), dict.size()});
 
+    std::cout << "Exporting as YAML\n";
+
     auto yaml = system.dumpYAML();
     util::writeFile("out.yaml", {reinterpret_cast<const u8*>(yaml.data()), yaml.size()}, false);
+
+    std::cout << "Done!\n";
 
     return 0;
 }
