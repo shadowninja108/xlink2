@@ -110,7 +110,6 @@ int main(int argc, char** argv) {
             }
 
             const auto dictData = archive.getFile("zs.zsdic");
-            std::cout << dictData.size() << "\n";
 
             std::vector<u8> buffer{};
             util::loadFile(filepath, buffer);

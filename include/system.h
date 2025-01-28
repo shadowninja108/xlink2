@@ -96,16 +96,21 @@ private:
     inline void dumpUser(LibyamlEmitterWithStorage<std::string>&, const User&) const;
 
     struct ValKey {
-        u32 value;
+        union {
+            s32 s;
+            u32 u;
+            f32 f;
+            bool b;
+        } value;
         union {
             xlink2::ParamType e;
             u32 u;
         } type;
 
         bool operator<(const ValKey& other) const {
-            if (this->type.u == other.type.u)
-                return this->value < other.value;
-            return this->type.u < other.type.u;
+            if (this->type.u != other.type.u)
+                return this->type.u < other.type.u;
+            return this->value.u < other.value.u;
         }
     };
 

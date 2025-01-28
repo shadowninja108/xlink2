@@ -809,11 +809,11 @@ void System::loadParam(Param& param, const c4::yml::ConstNodeRef& node, ParamTyp
             case xlink2::ParamType::Int: {
                 param.type = xlink2::ValueReferenceType::Direct;
                 const s32 val = static_cast<s32>(*ParseScalarAs<u64>(node));
-                auto res = valueMap.find({std::bit_cast<u32, s32>(val), xlink2::ParamType::Int});
+                auto res = valueMap.find(ValKey{{.s = val}, {.e = xlink2::ParamType::Int}});
                 if (res == valueMap.end()) {
-                    mDirectValues.emplace_back(val);
+                    mDirectValues.emplace_back(std::bit_cast<u32, s32>(val));
                     param.value = static_cast<u32>(mDirectValues.size() - 1);
-                    valueMap.emplace(ValKey{std::bit_cast<u32, s32>(val), xlink2::ParamType::Int}, static_cast<u32>(mDirectValues.size() - 1));
+                    valueMap.emplace(ValKey{{.s = val}, {.e = xlink2::ParamType::Int}}, static_cast<s32>(mDirectValues.size() - 1));
                 } else {
                     param.value = static_cast<u32>(res->second);
                 }
@@ -821,12 +821,12 @@ void System::loadParam(Param& param, const c4::yml::ConstNodeRef& node, ParamTyp
             }
             case xlink2::ParamType::Float: {
                 param.type = xlink2::ValueReferenceType::Direct;
-                const f32 val = static_cast<f32>(*ParseScalarAs<u64>(node));
-                auto res = valueMap.find({std::bit_cast<u32, f32>(val), xlink2::ParamType::Float});
+                const f32 val = static_cast<f32>(*ParseScalarAs<f64>(node));
+                auto res = valueMap.find(ValKey{{.f = val}, {.e = xlink2::ParamType::Float}});
                 if (res == valueMap.end()) {
-                    mDirectValues.emplace_back(val);
+                    mDirectValues.emplace_back(std::bit_cast<u32, f32>(val));
                     param.value = static_cast<u32>(mDirectValues.size() - 1);
-                    valueMap.emplace(ValKey{std::bit_cast<u32, f32>(val), xlink2::ParamType::Float}, static_cast<u32>(mDirectValues.size() - 1));
+                    valueMap.emplace(ValKey{{.f = val}, {.e = xlink2::ParamType::Float}}, static_cast<s32>(mDirectValues.size() - 1));
                 } else {
                     param.value = static_cast<u32>(res->second);
                 }
@@ -835,11 +835,11 @@ void System::loadParam(Param& param, const c4::yml::ConstNodeRef& node, ParamTyp
             case xlink2::ParamType::Bool: {
                 param.type = xlink2::ValueReferenceType::Direct;
                 const bool val = *ParseScalarAs<bool>(node);
-                auto res = valueMap.find({val ? 1u : 0u, xlink2::ParamType::Bool});
+                auto res = valueMap.find(ValKey{{.b = val}, {.e = xlink2::ParamType::Bool}});
                 if (res == valueMap.end()) {
                     mDirectValues.emplace_back(val ? 1 : 0);
                     param.value = static_cast<u32>(mDirectValues.size() - 1);
-                    valueMap.emplace(ValKey{val ? 1u : 0u, xlink2::ParamType::Bool}, static_cast<u32>(mDirectValues.size() - 1));
+                    valueMap.emplace(ValKey{{.b = val}, {.e = xlink2::ParamType::Bool}}, static_cast<s32>(mDirectValues.size() - 1));
                 } else {
                     param.value = static_cast<u32>(res->second);
                 }
@@ -848,11 +848,11 @@ void System::loadParam(Param& param, const c4::yml::ConstNodeRef& node, ParamTyp
             case xlink2::ParamType::Enum: {
                 param.type = xlink2::ValueReferenceType::Direct;
                 const u32 val = static_cast<u32>(*ParseScalarAs<u64>(node));
-                auto res = valueMap.find({val, xlink2::ParamType::Enum});
+                auto res = valueMap.find(ValKey{{.u = val}, {.e = xlink2::ParamType::Enum}});
                 if (res == valueMap.end()) {
                     mDirectValues.emplace_back(val);
                     param.value = static_cast<u32>(mDirectValues.size() - 1);
-                    valueMap.emplace(ValKey{val, xlink2::ParamType::Enum}, static_cast<u32>(mDirectValues.size() - 1));
+                    valueMap.emplace(ValKey{{.u = val}, {.e = xlink2::ParamType::Enum}}, static_cast<s32>(mDirectValues.size() - 1));
                 } else {
                     param.value = static_cast<u32>(res->second);
                 }
@@ -1358,42 +1358,6 @@ bool System::loadYAML(std::string_view text) {
 
     std::map<ValKey, s32> valueMap{};
 
-    const auto triggers = node.find_child("TriggerOverwriteParams");
-    if (triggers.invalid() || !triggers.is_map()) {
-        std::cerr << "Did not find TriggerOverwriteParams field!\n";
-        return false;
-    }
-
-    mTriggerOverwriteParams.resize(triggers.num_children());
-    for (u32 i = 0; const auto& child : triggers) {
-        loadParamSet(mTriggerOverwriteParams[i], child, ParamType::TRIGGER, valueMap);
-        ++i;
-    }
-
-    const auto assets = node.find_child("AssetParams");
-    if (assets.invalid() || !assets.is_map()) {
-        std::cerr << "Did not find AssetParams field!\n";
-        return false;
-    }
-
-    mAssetParams.resize(assets.num_children());
-    for (u32 i = 0; const auto& child : assets) {
-        loadParamSet(mAssetParams[i], child, ParamType::ASSET, valueMap);
-        ++i;
-    }
-
-    const auto conditions = node.find_child("Conditions");
-    if (conditions.invalid() || !conditions.is_map()) {
-        std::cerr << "Did not find Conditions field!\n";
-        return false;
-    }
-
-    mConditions.resize(conditions.num_children());
-    for (u32 i = 0; const auto& cond : conditions) {
-        loadCondition(mConditions[i], cond);
-        ++i;
-    }
-
     const auto users = node.find_child("Users");
     if (users.invalid() || !users.is_map()) {
         std::cerr << "Did not find Users field!\n";
@@ -1411,6 +1375,43 @@ bool System::loadYAML(std::string_view text) {
         auto res = mUsers.emplace(hash, User());
         loadUser((*res.first).second, child, valueMap);
     }
+
+    const auto assets = node.find_child("AssetParams");
+    if (assets.invalid() || !assets.is_map()) {
+        std::cerr << "Did not find AssetParams field!\n";
+        return false;
+    }
+
+    mAssetParams.resize(assets.num_children());
+    for (u32 i = 0; const auto& child : assets) {
+        loadParamSet(mAssetParams[i], child, ParamType::ASSET, valueMap);
+        ++i;
+    }
+
+    const auto triggers = node.find_child("TriggerOverwriteParams");
+    if (triggers.invalid() || !triggers.is_map()) {
+        std::cerr << "Did not find TriggerOverwriteParams field!\n";
+        return false;
+    }
+
+    mTriggerOverwriteParams.resize(triggers.num_children());
+    for (u32 i = 0; const auto& child : triggers) {
+        loadParamSet(mTriggerOverwriteParams[i], child, ParamType::TRIGGER, valueMap);
+        ++i;
+    }
+
+    const auto conditions = node.find_child("Conditions");
+    if (conditions.invalid() || !conditions.is_map()) {
+        std::cerr << "Did not find Conditions field!\n";
+        return false;
+    }
+
+    mConditions.resize(conditions.num_children());
+    for (u32 i = 0; const auto& cond : conditions) {
+        loadCondition(mConditions[i], cond);
+        ++i;
+    }
+
 
     return true;
 }

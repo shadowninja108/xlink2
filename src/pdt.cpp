@@ -237,6 +237,10 @@ void ParamDefineTable::dumpYAML(LibyamlEmitterWithStorage<std::string>& emitter,
     emitter.EmitString("ParamDefineTable");
 
     LibyamlEmitter::MappingScope scope{emitter, "!pdt", YAML_BLOCK_MAPPING_STYLE};
+    emitter.EmitString("SystemUserParamCount");
+    emitter.EmitInt(mSystemUserParamCount);
+    emitter.EmitString("SystemAssetParamCount");
+    emitter.EmitInt(mSystemAssetParamCount);
     {
         emitter.EmitString("UserParamDefines");
         LibyamlEmitter::MappingScope scope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
@@ -306,6 +310,9 @@ void ParamDefine::loadYAML(const ryml::ConstNodeRef& node, const std::string_vie
 }
 
 bool ParamDefineTable::loadYAML(const ryml::ConstNodeRef& node) {
+    mSystemUserParamCount = static_cast<s32>(*ParseScalarAs<u64>(RymlGetMapItem(node, "SystemUserParamCount")));
+    mSystemAssetParamCount = static_cast<s32>(*ParseScalarAs<u64>(RymlGetMapItem(node, "SystemAssetParamCount")));
+
     const auto strings = node.find_child("Strings");
     if (!strings.invalid() && strings.is_seq()) {
         for (const auto& child : strings) {

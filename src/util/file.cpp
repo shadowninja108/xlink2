@@ -89,10 +89,13 @@ void writeFile(const std::string& path, const std::span<const u8>& data, bool co
     std::vector<u8> fileData{};
     if (compress && dict.size() > 0) {
         const size_t compressionBufferSize = ZSTD_compressBound(data.size());
-        fileData.resize(compressionBufferSize);
+        std::vector<u8> tempBuffer{};
+        tempBuffer.resize(compressionBufferSize);
 
         ZSTD_CCtx* const cctx = ZSTD_createCCtx();
-        ZSTD_compress_usingDict(cctx, fileData.data(), fileData.size(), data.data(), data.size(), dict.data(), dict.size(), 22);
+        const size_t size = ZSTD_compress_usingDict(cctx, tempBuffer.data(), tempBuffer.size(), data.data(), data.size(), dict.data(), dict.size(), 22);
+        fileData.resize(size);
+        std::memcpy(fileData.data(), tempBuffer.data(), size);
         ZSTD_freeCCtx(cctx);
     } else {
         fileData.resize(data.size());

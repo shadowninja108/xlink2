@@ -59,6 +59,7 @@ _deps
 CMakeUserPresets.json
 
 build/*
+build_vs/*
 
 *.belnk
 *.bslnk
