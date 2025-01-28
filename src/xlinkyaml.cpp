@@ -4,8 +4,6 @@
 
 #include "usernames.inc"
 
-#include <windows.h>
-
 #include <bit>
 #include <iostream>
 #include <format>

@@ -22,7 +22,7 @@ Building from source is not required to use this tool, there are precompiled bin
 
 ###
 
-Building requires CMake 3.23+ and a C++ 20 compiler
+Building requires CMake 3.21+ and a C++ 20 compiler
 
 ```sh
 git clone https://github.com/dt-12345/xlink2.git
