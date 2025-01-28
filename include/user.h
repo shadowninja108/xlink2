@@ -21,7 +21,7 @@ class Serializer;
 class System;
 
 struct InitInfo {
-    std::unordered_map<ptrdiff_t, std::string_view> strings{};
+    std::unordered_map<u64, std::string_view> strings{};
     std::unordered_map<u64, s32> triggerParams{};
     std::unordered_map<u64, s32> assetParams{};
 };

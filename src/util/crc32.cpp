@@ -2,7 +2,7 @@
 
 namespace util {
 
-std::array<u32, 0x100> initializeCRC32Table() {
+constexpr std::array<u32, 0x100> initializeCRC32Table() {
     std::array<u32, 0x100> table;
 
     for (u32 i = 0; i < table.size(); ++i) {
@@ -16,7 +16,7 @@ std::array<u32, 0x100> initializeCRC32Table() {
     return table;
 }
 
-static std::array<u32, 0x100> sCRC32Table = initializeCRC32Table();
+static constexpr std::array<u32, 0x100> sCRC32Table = initializeCRC32Table();
 
 u32 calcCRC32(const char* str) {
     u32 hash = 0xffffffff;

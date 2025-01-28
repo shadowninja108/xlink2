@@ -149,7 +149,7 @@ bool StringNeedsQuotes(const std::string_view value) {
   return false;
 }
 
-Scalar ParseScalar(const ryml::NodeRef& node, TagRecognizer recognizer) {
+Scalar ParseScalar(const ryml::ConstNodeRef& node, TagRecognizer recognizer) {
   const std::string_view tag = RymlGetValTag(node);
   const std::string_view value = RymlSubstrToStrView(node.val());
   const char* arena_start = node.tree()->arena().data();
@@ -159,7 +159,7 @@ Scalar ParseScalar(const ryml::NodeRef& node, TagRecognizer recognizer) {
   return ParseScalar(tag, value, is_quoted, recognizer);
 }
 
-Scalar ParseScalarKey(const ryml::NodeRef& node, TagRecognizer recognizer) {
+Scalar ParseScalarKey(const ryml::ConstNodeRef& node, TagRecognizer recognizer) {
   const std::string_view tag = RymlGetKeyTag(node);
   const std::string_view value = RymlSubstrToStrView(node.key());
   const char* arena_start = node.tree()->arena().data();

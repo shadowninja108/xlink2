@@ -122,7 +122,7 @@ const xlink2::ResourceHeader Serializer::calcOffsets() {
     auto calcSize = [](const User& user) {
         UserInfo info{};
         u64 triggerTableOffset = sizeof(xlink2::ResUserHeader) + sizeof(u64) * user.mLocalProperties.size()
-            + sizeof(xlink2::ResParam) * user.mUserParams.size() + sizeof(u16) * (user.mSortedAssetIds.size() + user.mSortedAssetIds.size() % 2)
+            + sizeof(xlink2::ResParam) * user.mUserParams.size() + sizeof(u16) * (user.mAssetCallTables.size() + user.mAssetCallTables.size() % 2)
             + sizeof(xlink2::ResAssetCallTable) * user.mAssetCallTables.size();
         s32 assetCount = 0;
         for (u16 i = 0; const auto& act : user.mAssetCallTables) {

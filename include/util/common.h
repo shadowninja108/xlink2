@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.h"
+#include "util/error.h"
 
 #include <array>
 #include <bit>
@@ -20,6 +21,17 @@ u32 countOnBit(T value, u32 bit) {
     static_assert(std::is_unsigned<T>(), "Can only bit count unsigned values");
     const T mask = ((1u << bit) - 1) | (1u << bit);
     return std::popcount(static_cast<T>(value & mask));
+}
+
+template <typename T, size_t N, std::enable_if_t<std::is_enum_v<T>>* = nullptr>
+T matchEnum(std::string_view str, const std::array<std::string_view, N> values) {
+    for (u32 i = 0;const auto& value : values) {
+        if (str == value)
+            return static_cast<T>(i);
+        ++i;
+    }
+
+    throw InvalidDataError("Failed to match enum value!");
 }
 
 } // namespace util

@@ -15,7 +15,7 @@ struct ArrangeGroupParam {
 };
 
 struct ArrangeGroupParams {
-    std::vector<ArrangeGroupParam> groups;
+    std::vector<ArrangeGroupParam> groups; 
 };
 
 } // namespace banana

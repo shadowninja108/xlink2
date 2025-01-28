@@ -7,7 +7,7 @@
 
 namespace banana {
 
-void ParamDefine::initialize(const xlink2::ResParamDefine* param, const std::unordered_map<ptrdiff_t, std::string_view>& strings) {
+void ParamDefine::initialize(const xlink2::ResParamDefine* param, const std::unordered_map<u64, std::string_view>& strings) {
     mName = strings.at(param->nameOffset);
     mType = param->getType();
     switch (mType) {
@@ -75,11 +75,15 @@ bool ParamDefineTable::initialize(const ResourceAccessor& accessor) {
     const char* pos = nameTable;
     const char* end = reinterpret_cast<const char*>(accessor.getTriggerOverwriteParam(0));
 
-    std::unordered_map<ptrdiff_t, std::string_view> offsetMap{};
+    std::unordered_map<u64, std::string_view> offsetMap{};
 
     do {
         auto res = mStrings.insert(std::string(pos));
+#ifdef _MSC_VER
+        offsetMap.emplace(pos - nameTable, std::string_view(*res.first));
+#else
         offsetMap.emplace(reinterpret_cast<ptrdiff_t>(pos - nameTable), std::string_view(*res.first));
+#endif
         pos += (*res.first).size() + 1;
     } while (pos < end && *pos);
 
@@ -160,7 +164,14 @@ ParamDefine& ParamDefineTable::getTriggerParam(s32 index) {
     return mTriggerParams[index];
 }
 
-s32 ParamDefineTable::searchParamIndex(const std::string_view& name, ParamType type) const {
+const ParamDefine& ParamDefineTable::getParam(s32 index, ParamType type) const {
+    return (type == ParamType::USER) ? mUserParams[index] : (type == ParamType::ASSET ? mAssetParams[index] : mTriggerParams[index]);
+}
+ParamDefine& ParamDefineTable::getParam(s32 index, ParamType type) {
+    return (type == ParamType::USER) ? mUserParams[index] : (type == ParamType::ASSET ? mAssetParams[index] : mTriggerParams[index]);
+}
+
+s32 ParamDefineTable::searchParamIndex(const std::string_view name, ParamType type) const {
     switch (type) {
         case ParamType::USER: {
             for (s32 i = 0; const auto& define : mUserParams) {
@@ -215,17 +226,17 @@ void ParamDefine::dumpYAML(LibyamlEmitterWithStorage<std::string>& emitter) cons
             emitter.EmitString(std::get<std::string_view>(mDefaultValue));
             break;
         case xlink2::ParamType::Bitfield:
-            emitter.EmitScalar(std::format("{:#b}", std::get<u32>(mDefaultValue)), false, false, "!bitfield");
+            emitter.EmitScalar(std::format("{:#x}", std::get<u32>(mDefaultValue)), false, false, "!bitfield");
             break;
         default:
             throw InvalidDataError("Invalid param define type");
     }
 }
 
-void ParamDefineTable::dumpYAML(LibyamlEmitterWithStorage<std::string>& emitter) const {
+void ParamDefineTable::dumpYAML(LibyamlEmitterWithStorage<std::string>& emitter, bool exportStrings) const {
     emitter.EmitString("ParamDefineTable");
 
-    LibyamlEmitter::MappingScope scope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
+    LibyamlEmitter::MappingScope scope{emitter, "!pdt", YAML_BLOCK_MAPPING_STYLE};
     {
         emitter.EmitString("UserParamDefines");
         LibyamlEmitter::MappingScope scope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
@@ -247,6 +258,106 @@ void ParamDefineTable::dumpYAML(LibyamlEmitterWithStorage<std::string>& emitter)
             define.dumpYAML(emitter);
         }
     }
+    if (exportStrings) {
+        emitter.EmitString("Strings");
+        LibyamlEmitter::SequenceScope scope{emitter, {}, YAML_BLOCK_SEQUENCE_STYLE};
+        for (const auto& str : mStrings) {
+            emitter.EmitString(str);
+        }
+    }
+}
+
+void ParamDefine::loadYAML(const ryml::ConstNodeRef& node, const std::string_view&& name, ParamDefineTable& pdt) {
+    mName = std::move(name);
+
+    if (node.has_val_tag()) {
+        if (node.val_tag() == "!u") {
+            mType = xlink2::ParamType::Enum;
+            mDefaultValue = static_cast<u32>(*ParseScalarAs<u64>(node));
+            return;
+        } else if (node.val_tag() == "!bitfield") {
+            mType = xlink2::ParamType::Bitfield;
+            mDefaultValue = static_cast<u32>(*ParseScalarAs<u64>(node));
+            return;
+        } else {
+            throw ResourceError("Unknown node tag!");
+        }
+    }
+
+    const auto value = ParseScalar(node);
+    if (const u64* asInt = std::get_if<u64>(&value)) {
+        mType = xlink2::ParamType::Int;
+        mDefaultValue = static_cast<s32>(*asInt);
+        return;
+    }
+    if (const f64* asFloat = std::get_if<f64>(&value)) {
+        mType = xlink2::ParamType::Float;
+        mDefaultValue = static_cast<f32>(*asFloat);
+        return;
+    }
+    if (const bool* asBool = std::get_if<bool>(&value)) {
+        mType = xlink2::ParamType::Bool;
+        mDefaultValue = *asBool;
+        return;
+    }
+
+    mType = xlink2::ParamType::String;
+    mDefaultValue = std::move(pdt.addString(std::get<std::string>(value)));
+}
+
+bool ParamDefineTable::loadYAML(const ryml::ConstNodeRef& node) {
+    const auto strings = node.find_child("Strings");
+    if (!strings.invalid() && strings.is_seq()) {
+        for (const auto& child : strings) {
+            mStrings.insert({child.val().data(), child.val().size()});
+        }
+    }
+
+    const auto userParams = node.find_child("UserParamDefines");
+    if (userParams.invalid() || !userParams.is_map()) {
+        std::cout << "Failed to find UserParamDefines\n";
+        return false;
+    }
+
+    mUserParams.resize(userParams.num_children());
+
+    for (u32 i = 0; const auto& param : userParams) {
+        auto res = mStrings.insert({param.key().data(), param.key().size()});
+        mUserParams[i].loadYAML(param, *res.first, *this);
+        ++i;
+    }
+
+    const auto assetParams = node.find_child("AssetParamDefines");
+    if (assetParams.invalid() || !assetParams.is_map()) {
+        std::cout << "Failed to find AssetParamDefines\n";
+        return false;
+    }
+
+    mAssetParams.resize(assetParams.num_children());
+
+    for (u32 i = 0; const auto& param : assetParams) {
+        auto res = mStrings.insert({param.key().data(), param.key().size()});
+        mAssetParams[i].loadYAML(param, *res.first, *this);
+        ++i;
+    }
+
+    const auto triggerParams = node.find_child("TriggerParamDefines");
+    if (triggerParams.invalid() || !triggerParams.is_map()) {
+        std::cout << "Failed to find TriggerParamDefines\n";
+        return false;
+    }
+
+    mTriggerParams.resize(triggerParams.num_children());
+
+    for (u32 i = 0; const auto& param : triggerParams) {
+        auto res = mStrings.insert({param.key().data(), param.key().size()});
+        mTriggerParams[i].loadYAML(param, *res.first, *this);
+        ++i;
+    }
+
+    mInitialized = true;
+
+    return mInitialized;
 }
 
 } // namespace banana

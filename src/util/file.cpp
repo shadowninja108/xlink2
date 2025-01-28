@@ -85,7 +85,7 @@ bool loadFileWithDecomp(const std::string& path, std::vector<u8>& buffer, const 
     }
 }
 
-void writeFile(const std::string& path, const std::span<const u8>& data, bool compress, const std::span<u8>& dict) {
+void writeFile(const std::string& path, const std::span<const u8>& data, bool compress, const std::span<const u8>& dict) {
     std::vector<u8> fileData{};
     if (compress && dict.size() > 0) {
         const size_t compressionBufferSize = ZSTD_compressBound(data.size());

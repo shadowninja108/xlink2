@@ -40,6 +40,10 @@
 *.vsix
 
 .cache/*
+.vs/*
+out/*
+
+CMakeSettings.json
 
 CMakeLists.txt.user
 CMakeCache.txt

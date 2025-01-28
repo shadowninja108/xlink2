@@ -1,10 +1,48 @@
+# XLINK Conversion Tool
+
+## Usage
+
+Make sure to have a recent version Microsoft Visual C++ Redistributable installed on Windows.
+
+### Converting from XLNK to YAML
+
+```sh
+xlink_tool -e [path_to_xlnk_file] [output_yaml_path] [path_to_zsdic_pack] # last parameter is optional if the input file is not compressed
+```
+
+### Converting from YAML to XLNK
+
+```sh
+xlink_tool -i [path_to_yaml_file] [output_xlnk_path] [path_to_zsdic_pack] # last parameter is optional if the output shouldn't be compressed
+```
+
+## Building
+
+Building from source is not required to use this tool, there are precompiled binaries in Releases.
+
+###
+
+Building requires CMake 3.23+ and a C++ 20 compiler
+
+```sh
+git clone https://github.com/dt-12345/xlink2.git
+git submodule update --init --recursive
+# Feel free to adjust these parameters to your liking
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DZSTD_BUILD_SHARED=OFF -DZSTD_BUILD_PROGRAMS=OFF
+cmake --build build
+```
+
+## the messy part of the README with hastily explained details
+
 very experimental at the moment, there's not a good editing interface or anything
 
 editing technically works but you'd need to do it all in code
 
-serialization is almost byte perfect if I could just figure out how they sorted duplicate asset keys...
+serialization is almost byte perfect if I could just figure out how they sorted duplicate asset keys... (serialization is not byte perfect if loading from YAML however, there is extra unused data in the file that is unreference and that is not included in the YAML)
 
 thanks shadow for your research most of this is based off of (https://github.com/shadowninja108/woomlink)
+
+also thanks to leoetlino for the YAML parsing/writing utilities from oead [oead](https://github.com/zeldamods/oead)
 
 anyways, how does this file work?
 

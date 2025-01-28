@@ -90,6 +90,7 @@ target_sources(xlink_tool PRIVATE
     src/serializer.cpp
     src/system.cpp
     src/user.cpp
+    src/xlinkyaml.cpp
 
     src/main.cpp
 )

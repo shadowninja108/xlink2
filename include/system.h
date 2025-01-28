@@ -68,12 +68,20 @@ public:
 
     std::vector<u8> serialize();
 
-    std::string dumpYAML() const;
-    std::string dumpUser(u32) const;
+    std::string dumpYAML(bool exportStrings = false) const;
+
+    bool loadYAML(std::string_view);
+
+    const std::string_view addString(const std::string s) {
+        return std::move(*mStrings.insert(std::move(s)).first);
+    }
 
     friend class Serializer;
 
 private:
+    inline void dumpCurve(LibyamlEmitterWithStorage<std::string>&, const Curve&) const;
+    inline void dumpRandom(LibyamlEmitterWithStorage<std::string>&, const Random&) const;
+    inline void dumpArrangeGroupParam(LibyamlEmitterWithStorage<std::string>&, const ArrangeGroupParams&) const;
     inline void dumpParam(LibyamlEmitterWithStorage<std::string>&, const Param&, ParamType) const;
     inline void dumpParamSet(LibyamlEmitterWithStorage<std::string>&, const ParamSet&, ParamType) const;
     inline void dumpCondition(LibyamlEmitterWithStorage<std::string>&, const Condition&) const;
@@ -86,6 +94,36 @@ private:
     inline void dumpPropertyTrigger(LibyamlEmitterWithStorage<std::string>&, const PropertyTrigger&) const;
     inline void dumpAlwaysTrigger(LibyamlEmitterWithStorage<std::string>&, const AlwaysTrigger&) const;
     inline void dumpUser(LibyamlEmitterWithStorage<std::string>&, const User&) const;
+
+    struct ValKey {
+        u32 value;
+        union {
+            xlink2::ParamType e;
+            u32 u;
+        } type;
+
+        bool operator<(const ValKey& other) const {
+            if (this->type.u == other.type.u)
+                return this->value < other.value;
+            return this->type.u < other.type.u;
+        }
+    };
+
+    inline void loadCurve(Curve&, const c4::yml::ConstNodeRef&);
+    inline void loadRandom(Random&, const c4::yml::ConstNodeRef&);
+    inline void loadArrangeGroupParams(ArrangeGroupParams&, const c4::yml::ConstNodeRef&);
+    inline void loadParam(Param&, const c4::yml::ConstNodeRef&, ParamType, std::map<ValKey, s32>&);
+    inline void loadParamSet(ParamSet&, const c4::yml::ConstNodeRef&, ParamType, std::map<ValKey, s32>&);
+    inline void loadCondition(Condition&, const c4::yml::ConstNodeRef&);
+    inline void loadContainer(Container&, const c4::yml::ConstNodeRef&);
+    inline void loadAssetCallTable(AssetCallTable&, const c4::yml::ConstNodeRef&);
+    inline void loadActionSlot(ActionSlot&, const c4::yml::ConstNodeRef&);
+    inline void loadAction(Action&, const c4::yml::ConstNodeRef&);
+    inline void loadActionTrigger(ActionTrigger&, const c4::yml::ConstNodeRef&);
+    inline void loadProperty(Property&, const c4::yml::ConstNodeRef&);
+    inline void loadPropertyTrigger(PropertyTrigger&, const c4::yml::ConstNodeRef&);
+    inline void loadAlwaysTrigger(AlwaysTrigger&, const c4::yml::ConstNodeRef&);
+    inline void loadUser(User&, const c4::yml::ConstNodeRef&, std::map<ValKey, s32>&);
 
     ParamDefineTable mPDT;
     std::set<std::string> mStrings;

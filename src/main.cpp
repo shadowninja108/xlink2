@@ -12,9 +12,9 @@
 #define MAX_FILEPATH 0x1000
 
 const std::string parseInput(int argc, char** argv, s32 index) {
-    static constexpr std::string null_string{""};
+    static std::string null_string = "";
 
-    if (argc < 2) {
+    if (argc < 2 + index) {
         return null_string;
     }
 
@@ -28,54 +28,106 @@ int main(int argc, char** argv) {
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
-    std::cout << "Starting\n";
+    const std::string opt = parseInput(argc, argv, 0);
 
-    std::string filepath = parseInput(argc, argv, 0);
-    std::string dictPath = parseInput(argc, argv, 1);
+    if (opt == "" || opt == "-h" || opt == "--help") {
+        constexpr std::string_view helpMessage = \
+        "XLink2 Resource File Conversion Tool\n"
+        "-----------------------------------------------------------------------------------------\n"
+        "Usage:\n"
+        "Converting XLNK to YAML (final option is optional, include if decompression is desired)\n"
+        "  --export [path_to_xlink_file] [output_yaml_path] [path_to_zsdic_pack]\n"
+        "Converting YAML to XLNK (final option is optional, include if compression is desired)\n"
+        "  --import [path_to_yaml] [output_xlink_path] [path_to_zsdic_pack]";
+        std::cout << helpMessage;
+    } else if (opt == "--export" || opt == "-e") {
+        const std::string filepath = parseInput(argc, argv, 1);
+        const std::string outputPath = parseInput(argc, argv, 2);
+        const std::string dictPath = parseInput(argc, argv, 3);
 
-    std::cout << "Loading files\n";
+        if (dictPath == "") {
+            std::vector<u8> buffer{};
+            util::loadFile(filepath, buffer);
 
-    util::Archive archive;
-    if (!archive.loadArchive(dictPath)) {
-        std::cout << "failed to load dictionaries!\n";
-        return 1;
+            banana::System sys;
+            if (!sys.initialize(buffer.data(), buffer.size())) {
+                std::cerr << "Failed to parse file!\n";
+                return 1;
+            }
+            const std::string text = sys.dumpYAML();
+            util::writeFile(outputPath, {reinterpret_cast<const u8*>(text.data()), text.size()}, false);
+        } else {
+            util::Archive archive;
+            if (!archive.loadArchive(dictPath)) {
+                std::cerr << "failed to load dictionaries!\n";
+                return 1;
+            }
+
+            auto filenames = archive.getFilenames();
+            std::vector<std::vector<u8>> dicts(filenames.size());
+            for (u32 i = 0; const auto& filename : filenames) {
+                dicts[i] = archive.getFile(filename);
+                ++i;
+            }
+
+            std::vector<u8> buffer{};
+            if (!util::loadFileWithDecomp(filepath, buffer, dicts)) {
+                std::cerr << "failed to load file!\n";
+                return 1;
+            }
+
+            banana::System sys;
+            if (!sys.initialize(buffer.data(), buffer.size())) {
+                std::cerr << "Failed to parse file!\n";
+                return 1;
+            }
+
+            auto text = sys.dumpYAML();
+            util::writeFile(outputPath, {reinterpret_cast<const u8*>(text.data()), text.size()}, false);
+        }
+    } else if (opt == "--import" || opt == "-i") {
+        const std::string filepath = parseInput(argc, argv, 1);
+        const std::string outputPath = parseInput(argc, argv, 2);
+        const std::string dictPath = parseInput(argc, argv, 3);
+
+        if (dictPath == "") {
+            std::vector<u8> buffer{};
+            util::loadFile(filepath, buffer);
+
+            banana::System sys;
+            if (!sys.loadYAML({reinterpret_cast<char*>(buffer.data()), buffer.size()})) {
+                std::cerr << "Failed to parse file!\n";
+                return 1;
+            }
+
+            const auto data = sys.serialize();
+            util::writeFile(outputPath, {data.data(), data.size()}, false);
+        } else {
+            util::Archive archive;
+            if (!archive.loadArchive(dictPath)) {
+                std::cerr << "failed to load dictionaries!\n";
+                return 1;
+            }
+
+            const auto dictData = archive.getFile("zs.zsdic");
+            std::cout << dictData.size() << "\n";
+
+            std::vector<u8> buffer{};
+            util::loadFile(filepath, buffer);
+
+            banana::System sys;
+            if (!sys.loadYAML({reinterpret_cast<char*>(buffer.data()), buffer.size()})) {
+                std::cerr << "Failed to parse file!\n";
+                return 1;
+            }
+
+            const auto data = sys.serialize();
+            const std::span<const u8> dict = {dictData.data(), dictData.size()};
+            util::writeFile(outputPath, {data.data(), data.size()}, true, dict);
+        }
+    } else {
+        std::cout << "Unknown option! Please use --help for usage";
     }
-
-    auto filenames = archive.getFilenames();
-
-    std::vector<std::vector<u8>> dicts(filenames.size());
-    for (u32 i = 0; const auto& filename : filenames) {
-        dicts[i] = archive.getFile(filename);
-        ++i;
-    }
-
-    std::vector<u8> buffer;
-    if (!util::loadFileWithDecomp(filepath, buffer, dicts)) {
-        std::cout << "failed to load file!\n";
-        return 1;
-    }
-
-    std::cout << "Parsing file\n";
-
-    banana::System system;
-    system.initialize(buffer.data(), buffer.size());
-
-    // system.getPDT().printParams();
-
-    // system.printUser("Player");
-
-    // auto data = system.serialize();
-
-    // util::writeFile("out.bin", data, false);
-    // auto dict = archive.getFile("zs.zsdic");
-    // util::writeFile("out.bin.zs", data, true, {dict.data(), dict.size()});
-
-    std::cout << "Exporting as YAML\n";
-
-    auto yaml = system.dumpYAML();
-    util::writeFile("out.yaml", {reinterpret_cast<const u8*>(yaml.data()), yaml.size()}, false);
-
-    std::cout << "Done!\n";
 
     return 0;
 }

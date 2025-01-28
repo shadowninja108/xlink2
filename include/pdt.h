@@ -18,11 +18,13 @@ enum class ParamType {
     USER, ASSET, TRIGGER,
 };
 
+class ParamDefineTable;
+
 class ParamDefine {
 public:
     ParamDefine() = default;
 
-    void initialize(const xlink2::ResParamDefine* param, const std::unordered_map<ptrdiff_t, std::string_view>& strings);
+    void initialize(const xlink2::ResParamDefine* param, const std::unordered_map<u64, std::string_view>& strings);
 
     const std::string_view& getName() const {
         return mName;
@@ -57,6 +59,7 @@ public:
     void print() const;
 
     void dumpYAML(LibyamlEmitterWithStorage<std::string>&) const;
+    void loadYAML(const ryml::ConstNodeRef&, const std::string_view&&, ParamDefineTable&);
 
     friend class Serializer;
 
@@ -90,6 +93,9 @@ public:
     const ParamDefine& getTriggerParam(s32) const;
     ParamDefine& getTriggerParam(s32);
 
+    const ParamDefine& getParam(s32 index, ParamType type) const;
+    ParamDefine& getParam(s32 index, ParamType type);
+
     void printParams() const;
 
     u32 getUserParamCount() const {
@@ -104,9 +110,14 @@ public:
         return mTriggerParams.size();
     }
 
-    s32 searchParamIndex(const std::string_view&, ParamType) const;
+    s32 searchParamIndex(const std::string_view, ParamType) const;
 
-    void dumpYAML(LibyamlEmitterWithStorage<std::string>&) const;
+    void dumpYAML(LibyamlEmitterWithStorage<std::string>&, bool exportStrings = false) const;
+    bool loadYAML(const ryml::ConstNodeRef&);
+
+    const std::string_view addString(const std::string s) {
+        return std::move(*mStrings.insert(std::move(s)).first);
+    }
 
     friend class Serializer;
 

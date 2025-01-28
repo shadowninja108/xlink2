@@ -54,8 +54,8 @@ using TagRecognizer = std::optional<TagBasedType> (*)(std::string_view tag);
 
 Scalar ParseScalar(std::string_view tag, std::string_view value, bool is_quoted,
                    TagRecognizer recognizer);
-Scalar ParseScalar(const ryml::NodeRef& node, TagRecognizer recognizer);
-Scalar ParseScalarKey(const ryml::NodeRef& node, TagRecognizer recognizer);
+Scalar ParseScalar(const ryml::ConstNodeRef& node, TagRecognizer recognizer);
+Scalar ParseScalarKey(const ryml::ConstNodeRef& node, TagRecognizer recognizer);
 
 void InitRymlIfNeeded();
 
@@ -65,17 +65,49 @@ inline std::string_view RymlSubstrToStrView(c4::csubstr str) {
 inline c4::csubstr StrViewToRymlSubstr(std::string_view str) {
   return {str.data(), str.size()};
 }
-inline std::string_view RymlGetValTag(const ryml::NodeRef& n) {
+inline std::string_view RymlGetValTag(const ryml::ConstNodeRef& n) {
   return n.has_val_tag() ? RymlSubstrToStrView(n.val_tag()) : std::string_view{};
 }
-inline std::string_view RymlGetKeyTag(const ryml::NodeRef& n) {
+inline std::string_view RymlGetKeyTag(const ryml::ConstNodeRef& n) {
   return n.has_key_tag() ? RymlSubstrToStrView(n.key_tag()) : std::string_view{};
 }
-inline ryml::NodeRef RymlGetMapItem(ryml::NodeRef& n, std::string_view key) {
-  auto child = n.is_map() ? n.find_child(StrViewToRymlSubstr(key)) : ryml::NodeRef{};
+inline const ryml::ConstNodeRef RymlGetMapItem(const ryml::ConstNodeRef& n, std::string_view key) {
+  auto child = n.is_map() ? n.find_child(StrViewToRymlSubstr(key)) : ryml::ConstNodeRef{};
   if (!n.invalid())
     return child;
   throw std::out_of_range("No such key: " + std::string(key));
+}
+
+inline std::optional<TagBasedType> RecognizeTag(const std::string_view tag) {
+    if (tag == "!u" || tag == "!bitfield")
+        return TagBasedType::Int;
+    return std::nullopt;
+}
+
+inline Scalar ParseScalar(const ryml::ConstNodeRef& node) {
+    return ParseScalar(node, RecognizeTag);    
+}
+
+template <typename T>
+const std::optional<T> ParseScalarAs(const ryml::ConstNodeRef& node) {
+    auto res = ParseScalar(node);
+
+    if (const T* val = std::get_if<T>(&res))
+      return *val;
+    return std::nullopt;
+}
+
+inline Scalar ParseScalarKey(const ryml::ConstNodeRef& node) {
+    return ParseScalarKey(node, RecognizeTag);    
+}
+
+template <typename T>
+const std::optional<T> ParseScalarKeyAs(const ryml::ConstNodeRef& node) {
+    auto res = ParseScalarKey(node);
+
+    if (const T* val = std::get_if<T>(&res))
+      return *val;
+    return std::nullopt;
 }
 
 class ParseError : public std::runtime_error {
