@@ -42,6 +42,8 @@ if (${XLINK_TARGET} STREQUAL "TOTK")
 elseif (${XLINK_TARGET} STREQUAL "S3")
     message(STATUS "Setting XLINK_TARGET to S3")
     target_compile_definitions(xlink_tool PRIVATE XLINK_TARGET=2)
+else()
+    message(FATAL_ERROR "Invalid XLINK_TARGET! ${XLINK_TARGET}")
 endif()
 
 add_subdirectory(lib/zstd/build/cmake)
