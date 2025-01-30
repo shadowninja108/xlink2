@@ -147,8 +147,21 @@ bool System::initialize(void* data, size_t size) {
         (*res.first).second.initialize(this, accessor.getResUserHeader(i), info, conditionOffsets, arrangeParams);
     }
 
-    mConditions.resize(conditionOffsets.size());
     std::unordered_map<u64, s32> condIdxMap{};
+#if XLINK_TARGET == S3
+    std::vector<u64> badOffsets{};
+    for (const auto offset : conditionOffsets) {
+        if (reinterpret_cast<uintptr_t>(accessor.getCondition(offset)) >= reinterpret_cast<uintptr_t>(accessor.getString(0))) { // s3 has one asset like this?
+            badOffsets.emplace_back(offset);
+        }
+    }
+    for (const auto offset : badOffsets) {
+        conditionOffsets.erase(offset);
+        condIdxMap.emplace(offset, -1);
+    }
+#endif
+
+    mConditions.resize(conditionOffsets.size());
     for (u32 i = 0; const auto offset : conditionOffsets) {
         auto conditionBase = reinterpret_cast<const xlink2::ResCondition*>(accessor.getCondition(offset));
         mConditions[i].parentContainerType = conditionBase->getType();

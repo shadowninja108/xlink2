@@ -26,7 +26,9 @@ bool User::initialize(System* sys, const xlink2::ResUserHeader* res,
     mPropertyTriggers.resize(res->propertyTriggerCount);
     mAlwaysTriggers.resize(res->alwaysTriggerCount);
 
+#if XLINK_TARGET == TOTK
     mUnknown = res->unk;
+#endif
 
     const u64* locals = reinterpret_cast<const u64*>(res + 1);
     for (u32 i = 0; i < mLocalProperties.size(); ++i) {

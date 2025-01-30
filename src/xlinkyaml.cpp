@@ -628,8 +628,10 @@ void System::dumpUser(LibyamlEmitterWithStorage<std::string>& emitter, const Use
         }
     }
 
+#if XLINK_TARGET == TOTK
     emitter.EmitString("Unknown");
     emitter.EmitInt(user.mUnknown);
+#endif
 }
 
 std::string System::dumpYAML(bool exportStrings) const {
@@ -1244,7 +1246,9 @@ void System::loadUser(User& user, const c4::yml::ConstNodeRef& node, std::map<Va
         ++i;
     }
 
+#if XLINK_TARGET == TOTK
     user.mUnknown = static_cast<u32>(*FindParseScalar<u64>("Unknown", node));
+#endif
 }
 
 bool System::loadYAML(std::string_view text) {
@@ -1271,7 +1275,7 @@ bool System::loadYAML(std::string_view text) {
         return false;
     }
 
-    if (mVersion != 0x24 && mVersion != 0x21) {
+    if (mVersion != ResourceAccessor::sELinkResourceVersion && mVersion != ResourceAccessor::sSLinkResourceVersion) {
         std::cerr << "Invalid version!\n";
         return false;
     }

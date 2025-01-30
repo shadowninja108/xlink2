@@ -305,8 +305,12 @@ void Serializer::writeUser(const User& user, const u32 hash) {
     
     const xlink2::ResUserHeader header = {
         .isSetup = 0,
+#if XLINK_TARGET == TOTK
         .localPropertyCount = static_cast<s16>(user.mLocalProperties.size()),
         .unk = user.mUnknown,
+#elif XLINK_TARGET == S3
+        .localPropertyCount = static_cast<s32>(user.mLocalProperties.size()),
+#endif
         .callCount = static_cast<s32>(user.mAssetCallTables.size()),
         .assetCount = info.assetCount,
         .randomContainerCount = info.randomContainerCount,
@@ -598,6 +602,8 @@ void Serializer::serialize() {
     for (const auto& [hash, user] : mSystem->mUsers) {
         write(hash);
     }
+
+    align(0x8);
 
     for (const auto& [hash, offset] : mUserOffsets) {
         write(offset);

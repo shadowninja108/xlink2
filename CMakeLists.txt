@@ -28,6 +28,22 @@ endif()
 
 set(BUILD_TESTING OFF)
 
+add_compile_definitions(XLINK_TARGET)
+
+if (NOT DEFINED XLINK_TARGET)
+    set(XLINK_TARGET TOTK)
+endif()
+
+# this makes gcc spit out warnings about redefinitions of XLINK_TARGET in every TU but idk how to fix that without including it into a file
+target_compile_definitions(xlink_tool PRIVATE TOTK=1 S3=2)
+if (${XLINK_TARGET} STREQUAL "TOTK")
+    message(STATUS "Setting XLINK_TARGET to TOTK")
+    target_compile_definitions(xlink_tool PRIVATE XLINK_TARGET=1)
+elseif (${XLINK_TARGET} STREQUAL "S3")
+    message(STATUS "Setting XLINK_TARGET to S3")
+    target_compile_definitions(xlink_tool PRIVATE XLINK_TARGET=2)
+endif()
+
 add_subdirectory(lib/zstd/build/cmake)
 add_subdirectory(lib/libyaml)
 add_subdirectory(lib/ryml)

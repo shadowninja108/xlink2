@@ -1,5 +1,7 @@
 # XLINK Conversion Tool
 
+Tool for converting XLNK files to and from YAML (works for `TotK` and maybe `S3`)
+
 ## Usage
 
 Make sure to have a recent version Microsoft Visual C++ Redistributable installed on Windows.
