@@ -95,7 +95,7 @@ private:
     inline void dumpAlwaysTrigger(LibyamlEmitterWithStorage<std::string>&, const AlwaysTrigger&) const;
     inline void dumpUser(LibyamlEmitterWithStorage<std::string>&, const User&) const;
 
-    struct ValKey {
+    struct DirectValue {
         union {
             s32 s;
             u32 u;
@@ -107,7 +107,7 @@ private:
             u32 u;
         } type;
 
-        bool operator<(const ValKey& other) const {
+        bool operator<(const DirectValue& other) const {
             if (this->type.u != other.type.u)
                 return this->type.u < other.type.u;
             return this->value.u < other.value.u;
@@ -117,8 +117,8 @@ private:
     inline void loadCurve(Curve&, const c4::yml::ConstNodeRef&);
     inline void loadRandom(Random&, const c4::yml::ConstNodeRef&);
     inline void loadArrangeGroupParams(ArrangeGroupParams&, const c4::yml::ConstNodeRef&);
-    inline void loadParam(Param&, const c4::yml::ConstNodeRef&, ParamType, std::map<ValKey, s32>&);
-    inline void loadParamSet(ParamSet&, const c4::yml::ConstNodeRef&, ParamType, std::map<ValKey, s32>&);
+    inline void loadParam(Param&, const c4::yml::ConstNodeRef&, ParamType /*, std::map<DirectValue, s32>&*/);
+    inline void loadParamSet(ParamSet&, const c4::yml::ConstNodeRef&, ParamType /*, std::map<DirectValue, s32>&*/);
     inline void loadCondition(Condition&, const c4::yml::ConstNodeRef&);
     inline void loadContainer(Container&, const c4::yml::ConstNodeRef&);
     inline void loadAssetCallTable(AssetCallTable&, const c4::yml::ConstNodeRef&);
@@ -128,7 +128,7 @@ private:
     inline void loadProperty(Property&, const c4::yml::ConstNodeRef&);
     inline void loadPropertyTrigger(PropertyTrigger&, const c4::yml::ConstNodeRef&);
     inline void loadAlwaysTrigger(AlwaysTrigger&, const c4::yml::ConstNodeRef&);
-    inline void loadUser(User&, const c4::yml::ConstNodeRef&, std::map<ValKey, s32>&);
+    inline void loadUser(User&, const c4::yml::ConstNodeRef& /*, std::map<DirectValue, s32>&*/);
 
     ParamDefineTable mPDT;
     std::set<std::string> mStrings;
@@ -136,7 +136,7 @@ private:
     std::vector<std::string_view> mLocalPropertyEnumStrings;
     std::vector<Curve> mCurves;
     std::vector<Random> mRandomCalls;
-    std::vector<u32> mDirectValues;
+    std::vector<DirectValue> mDirectValues;
     std::vector<ParamSet> mTriggerOverwriteParams;
     std::vector<ParamSet> mAssetParams;
     std::map<u32, User> mUsers;

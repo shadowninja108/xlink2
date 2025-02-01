@@ -33,7 +33,7 @@ namespace banana {
 using namespace std::string_view_literals;
 
 std::string FormatFloat(float value) {
-  std::string repr = std::format("{:.9f}", value);
+  std::string repr = std::format("{:.12f}", value);
   if (repr.find(".") == std::string::npos && repr.find("e") == std::string::npos)
     repr += ".0"sv;
   return repr;

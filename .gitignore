@@ -58,8 +58,7 @@ CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
 
-build/*
-build_vs/*
+build*/*
 
 *.belnk
 *.bslnk

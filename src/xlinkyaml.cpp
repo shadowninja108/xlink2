@@ -94,19 +94,23 @@ void System::dumpParam(LibyamlEmitterWithStorage<std::string>& emitter, const Pa
         case RefType::Direct: {
             switch (paramType) {
                 case ValType::Int: {
-                    emitter.EmitInt(getDirectValueS32(std::get<u32>(param.value)));
+                    emitter.EmitInt(std::get<u32>(param.value), "!directValue");
+                    // emitter.EmitInt(getDirectValueS32(std::get<u32>(param.value)));
                     break;
                 }
                 case ValType::Float: {
-                    emitter.EmitFloat(getDirectValueF32(std::get<u32>(param.value)));
+                    emitter.EmitInt(std::get<u32>(param.value), "!directValue");
+                    // emitter.EmitFloat(getDirectValueF32(std::get<u32>(param.value)));
                     break;
                 }
                 case ValType::Bool: {
-                    emitter.EmitBool(getDirectValueU32(std::get<u32>(param.value)) != 0);
+                    emitter.EmitInt(std::get<u32>(param.value), "!directValue");
+                    // emitter.EmitBool(getDirectValueU32(std::get<u32>(param.value)) != 0);
                     break;
                 }
                 case ValType::Enum: {
-                    emitter.EmitScalar(std::format("{:#010x}", getDirectValueU32(std::get<u32>(param.value))), false, false, "!u");
+                    emitter.EmitInt(std::get<u32>(param.value), "!directValue");
+                    // emitter.EmitScalar(std::format("{:#010x}", getDirectValueU32(std::get<u32>(param.value))), false, false, "!u");
                     break;
                 }
                 case ValType::String:
@@ -693,6 +697,38 @@ std::string System::dumpYAML(bool exportStrings) const {
             }
         }
         {
+            emitter.EmitString("DirectValues");
+            LibyamlEmitter::MappingScope mapScope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
+            for (u32 i = 0; const auto& value : mDirectValues) {
+                emitter.EmitInt(i);
+                switch (value.type.e) {
+                    case static_cast<xlink2::ParamType>(-1): {
+                        emitter.EmitScalar(std::format("{:#010x}", value.value.u), false, false, "!unknown");
+                        break;
+                    }
+                    case xlink2::ParamType::Int: {
+                        emitter.EmitInt(value.value.s);
+                        break;
+                    }
+                    case xlink2::ParamType::Float: {
+                        emitter.EmitFloat(value.value.f);
+                        break;
+                    }
+                    case xlink2::ParamType::Bool: {
+                        emitter.EmitBool(value.value.b);
+                        break;
+                    }
+                    case xlink2::ParamType::Enum: {
+                        emitter.EmitScalar(std::format("{:#010x}", value.value.u), false, false, "!u");
+                        break;
+                    }
+                    default:
+                        throw InvalidDataError("Invalid direct value parameter type");
+                }
+                ++i;
+            }
+        }
+        {
             emitter.EmitString("AssetParams");
             LibyamlEmitter::MappingScope mapScope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
             for (u32 i = 0; const auto& param : mAssetParams) {
@@ -800,62 +836,66 @@ void System::loadArrangeGroupParams(ArrangeGroupParams& groups, const c4::yml::C
 }
 
 
-void System::loadParam(Param& param, const c4::yml::ConstNodeRef& node, ParamType type, std::map<ValKey, s32>& valueMap) {
+void System::loadParam(Param& param, const c4::yml::ConstNodeRef& node, ParamType type /*, std::map<DirectValue, s32>& valueMap */) {
     param.index = mPDT.searchParamIndex(RymlSubstrToStrView(node.key()), type);
     const std::string_view tag = RymlGetValTag(node);
     const auto define = mPDT.getParam(param.index, type);
-    if (tag.empty() || tag == "!u") {
+    if (tag.empty() || tag == "!directValue") {
         switch (define.getType()) {
             case xlink2::ParamType::Int: {
                 param.type = xlink2::ValueReferenceType::Direct;
-                const s32 val = static_cast<s32>(*ParseScalarAs<u64>(node));
-                auto res = valueMap.find(ValKey{{.s = val}, {.e = xlink2::ParamType::Int}});
-                if (res == valueMap.end()) {
-                    mDirectValues.emplace_back(std::bit_cast<u32, s32>(val));
-                    param.value = static_cast<u32>(mDirectValues.size() - 1);
-                    valueMap.emplace(ValKey{{.s = val}, {.e = xlink2::ParamType::Int}}, static_cast<s32>(mDirectValues.size() - 1));
-                } else {
-                    param.value = static_cast<u32>(res->second);
-                }
+                param.value = static_cast<u32>(*ParseScalarAs<u64>(node));
+                // const s32 val = static_cast<s32>(*ParseScalarAs<u64>(node));
+                // auto res = valueMap.find(DirectValue{{.s = val}, {.e = xlink2::ParamType::Int}});
+                // if (res == valueMap.end()) {
+                //     mDirectValues.emplace_back(std::bit_cast<u32, s32>(val));
+                //     param.value = static_cast<u32>(mDirectValues.size() - 1);
+                //     valueMap.emplace(DirectValue{{.s = val}, {.e = xlink2::ParamType::Int}}, static_cast<s32>(mDirectValues.size() - 1));
+                // } else {
+                //     param.value = static_cast<u32>(res->second);
+                // }
                 return;
             }
             case xlink2::ParamType::Float: {
                 param.type = xlink2::ValueReferenceType::Direct;
-                const f32 val = static_cast<f32>(*ParseScalarAs<f64>(node));
-                auto res = valueMap.find(ValKey{{.f = val}, {.e = xlink2::ParamType::Float}});
-                if (res == valueMap.end()) {
-                    mDirectValues.emplace_back(std::bit_cast<u32, f32>(val));
-                    param.value = static_cast<u32>(mDirectValues.size() - 1);
-                    valueMap.emplace(ValKey{{.f = val}, {.e = xlink2::ParamType::Float}}, static_cast<s32>(mDirectValues.size() - 1));
-                } else {
-                    param.value = static_cast<u32>(res->second);
-                }
+                param.value = static_cast<u32>(*ParseScalarAs<u64>(node));
+                // const f32 val = static_cast<f32>(*ParseScalarAs<f64>(node));
+                // auto res = valueMap.find(DirectValue{{.f = val}, {.e = xlink2::ParamType::Float}});
+                // if (res == valueMap.end()) {
+                //     mDirectValues.emplace_back(std::bit_cast<u32, f32>(val));
+                //     param.value = static_cast<u32>(mDirectValues.size() - 1);
+                //     valueMap.emplace(DirectValue{{.f = val}, {.e = xlink2::ParamType::Float}}, static_cast<s32>(mDirectValues.size() - 1));
+                // } else {
+                //     param.value = static_cast<u32>(res->second);
+                // }
                 return;
             }
             case xlink2::ParamType::Bool: {
                 param.type = xlink2::ValueReferenceType::Direct;
-                const bool val = *ParseScalarAs<bool>(node);
-                auto res = valueMap.find(ValKey{{.b = val}, {.e = xlink2::ParamType::Bool}});
-                if (res == valueMap.end()) {
-                    mDirectValues.emplace_back(val ? 1 : 0);
-                    param.value = static_cast<u32>(mDirectValues.size() - 1);
-                    valueMap.emplace(ValKey{{.b = val}, {.e = xlink2::ParamType::Bool}}, static_cast<s32>(mDirectValues.size() - 1));
-                } else {
-                    param.value = static_cast<u32>(res->second);
-                }
+                param.value = static_cast<u32>(*ParseScalarAs<u64>(node));
+                // const bool val = *ParseScalarAs<bool>(node);
+                // auto res = valueMap.find(DirectValue{{.b = val}, {.e = xlink2::ParamType::Bool}});
+                // if (res == valueMap.end()) {
+                //     mDirectValues.emplace_back(val ? 1 : 0);
+                //     param.value = static_cast<u32>(mDirectValues.size() - 1);
+                //     valueMap.emplace(DirectValue{{.b = val}, {.e = xlink2::ParamType::Bool}}, static_cast<s32>(mDirectValues.size() - 1));
+                // } else {
+                //     param.value = static_cast<u32>(res->second);
+                // }
                 return;
             }
             case xlink2::ParamType::Enum: {
                 param.type = xlink2::ValueReferenceType::Direct;
-                const u32 val = static_cast<u32>(*ParseScalarAs<u64>(node));
-                auto res = valueMap.find(ValKey{{.u = val}, {.e = xlink2::ParamType::Enum}});
-                if (res == valueMap.end()) {
-                    mDirectValues.emplace_back(val);
-                    param.value = static_cast<u32>(mDirectValues.size() - 1);
-                    valueMap.emplace(ValKey{{.u = val}, {.e = xlink2::ParamType::Enum}}, static_cast<s32>(mDirectValues.size() - 1));
-                } else {
-                    param.value = static_cast<u32>(res->second);
-                }
+                param.value = static_cast<u32>(*ParseScalarAs<u64>(node));
+                // const u32 val = static_cast<u32>(*ParseScalarAs<u64>(node));
+                // auto res = valueMap.find(DirectValue{{.u = val}, {.e = xlink2::ParamType::Enum}});
+                // if (res == valueMap.end()) {
+                //     mDirectValues.emplace_back(val);
+                //     param.value = static_cast<u32>(mDirectValues.size() - 1);
+                //     valueMap.emplace(DirectValue{{.u = val}, {.e = xlink2::ParamType::Enum}}, static_cast<s32>(mDirectValues.size() - 1));
+                // } else {
+                //     param.value = static_cast<u32>(res->second);
+                // }
                 return;
             }
             case xlink2::ParamType::String: {
@@ -896,10 +936,10 @@ void System::loadParam(Param& param, const c4::yml::ConstNodeRef& node, ParamTyp
     throw ParseError(std::format("Invalid tag! {:s}", tag));
 }
 
-void System::loadParamSet(ParamSet& params, const c4::yml::ConstNodeRef& node, ParamType type, std::map<ValKey, s32>& valueMap) {
+void System::loadParamSet(ParamSet& params, const c4::yml::ConstNodeRef& node, ParamType type /*, std::map<DirectValue, s32>& valueMap */) {
     params.params.resize(node.num_children());
     for (u32 i = 0; const auto& child : node) {
-        loadParam(params.params[i], child, type, valueMap);
+        loadParam(params.params[i], child, type /*, valueMap */);
         ++i;
     }
 }
@@ -1145,7 +1185,7 @@ void System::loadAlwaysTrigger(AlwaysTrigger& trigger, const c4::yml::ConstNodeR
     trigger.triggerOverwriteIdx = static_cast<s32>(*FindParseScalar<u64>("TriggerOverwriteParamIndex", node));
 }
 
-void System::loadUser(User& user, const c4::yml::ConstNodeRef& node, std::map<ValKey, s32>& valueMap) {
+void System::loadUser(User& user, const c4::yml::ConstNodeRef& node /*, std::map<DirectValue, s32>& valueMap */) {
     const auto localProps = node.find_child("LocalProperties");
     if (localProps.invalid() || !localProps.is_seq())
         throw ParseError("Did not find LocalProperties field!\n");
@@ -1162,7 +1202,7 @@ void System::loadUser(User& user, const c4::yml::ConstNodeRef& node, std::map<Va
 
     user.mUserParams.resize(userParams.num_children());
     for (u32 i = 0; const auto& child : userParams) {
-        loadParam(user.mUserParams[i], child, ParamType::USER, valueMap);
+        loadParam(user.mUserParams[i], child, ParamType::USER /*, valueMap */);
         ++i;
     }
 
@@ -1358,7 +1398,41 @@ bool System::loadYAML(std::string_view text) {
         ++i;
     }
 
-    std::map<ValKey, s32> valueMap{};
+    const auto directVals = node.find_child("DirectValues");
+    if (directVals.invalid() || !directVals.is_map()) {
+        std::cerr << "Did not fine DirectValues field!\n";
+        return false;
+    }
+
+    mDirectValues.resize(directVals.num_children());
+    for (u32 i = 0; const auto& val : directVals) {
+        if (!val.has_val_tag()) {
+            const auto value = ParseScalar(val);
+            if (const u64* asInt = std::get_if<u64>(&value)) {
+                mDirectValues[i].type.e = xlink2::ParamType::Int;
+                mDirectValues[i].value.s = static_cast<s32>(*asInt);
+            } else if (const f64* asFloat = std::get_if<f64>(&value)) {
+                mDirectValues[i].type.e = xlink2::ParamType::Float;
+                mDirectValues[i].value.f = static_cast<f32>(*asFloat);
+            } else if (const bool* asBool = std::get_if<bool>(&value)) {
+                mDirectValues[i].type.e = xlink2::ParamType::Bool;
+                mDirectValues[i].value.b = *asBool;
+            } else {
+                throw ParseError("Failed to parse switch condition property value");
+            }
+        } else {
+            const std::string_view tag = RymlGetValTag(val);
+            mDirectValues[i].value.u = static_cast<u32>(*ParseScalarAs<u64>(val));
+            if (tag == "!u") {
+                mDirectValues[i].type.e = xlink2::ParamType::Enum;
+            } else {
+                mDirectValues[i].type.e = static_cast<xlink2::ParamType>(-1);
+            }
+        }
+        ++i;
+    }
+
+    // std::map<DirectValue, s32> valueMap{};
 
     const auto users = node.find_child("Users");
     if (users.invalid() || !users.is_map()) {
@@ -1375,7 +1449,7 @@ bool System::loadYAML(std::string_view text) {
             hash = util::calcCRC32(*ParseScalarKeyAs<std::string>(child));
         }
         auto res = mUsers.emplace(hash, User());
-        loadUser((*res.first).second, child, valueMap);
+        loadUser((*res.first).second, child /*, valueMap*/);
     }
 
     const auto assets = node.find_child("AssetParams");
@@ -1386,7 +1460,7 @@ bool System::loadYAML(std::string_view text) {
 
     mAssetParams.resize(assets.num_children());
     for (u32 i = 0; const auto& child : assets) {
-        loadParamSet(mAssetParams[i], child, ParamType::ASSET, valueMap);
+        loadParamSet(mAssetParams[i], child, ParamType::ASSET /*, valueMap*/);
         ++i;
     }
 
@@ -1398,7 +1472,7 @@ bool System::loadYAML(std::string_view text) {
 
     mTriggerOverwriteParams.resize(triggers.num_children());
     for (u32 i = 0; const auto& child : triggers) {
-        loadParamSet(mTriggerOverwriteParams[i], child, ParamType::TRIGGER, valueMap);
+        loadParamSet(mTriggerOverwriteParams[i], child, ParamType::TRIGGER /*, valueMap*/);
         ++i;
     }
 

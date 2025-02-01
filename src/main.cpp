@@ -124,6 +124,52 @@ int main(int argc, char** argv) {
             const std::span<const u8> dict = {dictData.data(), dictData.size()};
             util::writeFile(outputPath, {data.data(), data.size()}, true, dict);
         }
+    } else if (opt == "--roundtrip") {
+        const std::string filepath = parseInput(argc, argv, 1);
+        const std::string outputPath = parseInput(argc, argv, 2);
+        const std::string dictPath = parseInput(argc, argv, 3);
+
+
+        if (dictPath == "") {
+            std::vector<u8> buffer{};
+            util::loadFile(filepath, buffer);
+
+            banana::System sys;
+            if (!sys.initialize(buffer.data(), buffer.size())) {
+                std::cerr << "Failed to parse file!\n";
+                return 1;
+            }
+            const auto data = sys.serialize();
+            util::writeFile(outputPath, {reinterpret_cast<const u8*>(data.data()), data.size()}, false);
+        } else {
+            util::Archive archive;
+            if (!archive.loadArchive(dictPath)) {
+                std::cerr << "failed to load dictionaries!\n";
+                return 1;
+            }
+
+            auto filenames = archive.getFilenames();
+            std::vector<std::vector<u8>> dicts(filenames.size());
+            for (u32 i = 0; const auto& filename : filenames) {
+                dicts[i] = archive.getFile(filename);
+                ++i;
+            }
+
+            std::vector<u8> buffer{};
+            if (!util::loadFileWithDecomp(filepath, buffer, dicts)) {
+                std::cerr << "failed to load file!\n";
+                return 1;
+            }
+
+            banana::System sys;
+            if (!sys.initialize(buffer.data(), buffer.size())) {
+                std::cerr << "Failed to parse file!\n";
+                return 1;
+            }
+
+            const auto data = sys.serialize();
+            util::writeFile(outputPath, {reinterpret_cast<const u8*>(data.data()), data.size()}, false);
+        }
     } else {
         std::cout << "Unknown option! Please use --help for usage";
     }

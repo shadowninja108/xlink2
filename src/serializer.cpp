@@ -648,7 +648,7 @@ void Serializer::serialize() {
     }
 
     for (const auto& value : mSystem->mDirectValues) {
-        write(value);
+        write(value.value.u);
     }
 
     for (const auto& random : mSystem->mRandomCalls) {

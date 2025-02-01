@@ -83,7 +83,8 @@ bool System::initialize(void* data, size_t size) {
 
     for (u32 i = 0; i < mDirectValues.size(); ++i) {
         // we can cast these when we need them
-        mDirectValues[i] = accessor.getDirectValueU32(i);
+        mDirectValues[i].value.u = accessor.getDirectValueU32(i);
+        mDirectValues[i].type.u = static_cast<u32>(-1);
     }
 
     std::set<u64> arrangeParams{};
@@ -104,10 +105,13 @@ bool System::initialize(void* data, size_t size) {
             if ((param->values >> j & 1) == 1) {
                 mAssetParams[i].params[paramIdx].type = params[paramIdx].getValueReferenceType();
                 mAssetParams[i].params[paramIdx].value = params[paramIdx].getValue();
+                mAssetParams[i].params[paramIdx].index = j;
                 if (params[paramIdx].getValueReferenceType() == xlink2::ValueReferenceType::ArrangeParam) {
                     arrangeParams.insert(params[paramIdx].getValue());
+                } else if (params[paramIdx].getValueReferenceType() == xlink2::ValueReferenceType::Direct) {
+                    const auto def = mPDT.getAssetParam(j);
+                    mDirectValues[params[paramIdx].getValue()].type.e = def.getType();
                 }
-                mAssetParams[i].params[paramIdx].index = j;
                 ++paramIdx;
             }
         }
@@ -130,10 +134,13 @@ bool System::initialize(void* data, size_t size) {
             if ((param->values >> j & 1) == 1) {
                 mTriggerOverwriteParams[i].params[paramIdx].type = params[paramIdx].getValueReferenceType();
                 mTriggerOverwriteParams[i].params[paramIdx].value = params[paramIdx].getValue();
+                mTriggerOverwriteParams[i].params[paramIdx].index = j;
                 if (params[paramIdx].getValueReferenceType() == xlink2::ValueReferenceType::ArrangeParam) {
                     arrangeParams.insert(params[paramIdx].getValue());
+                } else if (params[paramIdx].getValueReferenceType() == xlink2::ValueReferenceType::Direct) {
+                    const auto def = mPDT.getTriggerParam(j);
+                    mDirectValues[params[paramIdx].getValue()].type.e = def.getType();
                 }
-                mTriggerOverwriteParams[i].params[paramIdx].index = j;
                 ++paramIdx;
             }
         }
@@ -147,28 +154,21 @@ bool System::initialize(void* data, size_t size) {
         (*res.first).second.initialize(this, accessor.getResUserHeader(i), info, conditionOffsets, arrangeParams);
     }
 
+    // FIXME: move this before users to skip having to go back and fix condition offsets later
     std::unordered_map<u64, s32> condIdxMap{};
-#if XLINK_TARGET == S3
-    std::vector<u64> badOffsets{};
-    for (const auto offset : conditionOffsets) {
-        if (reinterpret_cast<uintptr_t>(accessor.getCondition(offset)) >= reinterpret_cast<uintptr_t>(accessor.getString(0))) { // s3 has one asset like this?
-            badOffsets.emplace_back(offset);
-        }
-    }
-    for (const auto offset : badOffsets) {
-        conditionOffsets.erase(offset);
-        condIdxMap.emplace(offset, -1);
-    }
-#endif
-
-    mConditions.resize(conditionOffsets.size());
-    for (u32 i = 0; const auto offset : conditionOffsets) {
-        auto conditionBase = reinterpret_cast<const xlink2::ResCondition*>(accessor.getCondition(offset));
-        mConditions[i].parentContainerType = conditionBase->getType();
+    u64 condOffset = 0;
+    u64 condBase = reinterpret_cast<uintptr_t>(accessor.getCondition(0));
+    u64 condEnd = reinterpret_cast<uintptr_t>(accessor.getString(0));
+    u32 i = 0;
+    while (condBase + condOffset < condEnd) {
+        condIdxMap.emplace(condOffset, i);
+        Condition cond{};
+        auto conditionBase = reinterpret_cast<const xlink2::ResCondition*>(accessor.getCondition(condOffset));
+        cond.parentContainerType = conditionBase->getType();
         switch (conditionBase->getType()) {
             case xlink2::ContainerType::Switch: {
                 auto resCond = static_cast<const xlink2::ResSwitchCondition*>(conditionBase);
-                auto condition = mConditions[i].getAs<xlink2::ContainerType::Switch>();
+                auto condition = cond.getAs<xlink2::ContainerType::Switch>();
                 condition->propType = resCond->getPropType();
                 condition->compareType = resCond->getCompareType();
                 condition->isGlobal = resCond->isGlobal;
@@ -176,40 +176,51 @@ bool System::initialize(void* data, size_t size) {
                 condition->enumValue = resCond->enumValue;
                 condition->conditionValue.i = resCond->value.i;
                 // this field only conditionally exists
-                if (condition->propType == xlink2::PropertyType::Enum)
+                if (condition->propType == xlink2::PropertyType::Enum) {
                     condition->enumName = info.strings.at(resCond->enumNameOffset);
+                    condOffset += sizeof(xlink2::ResSwitchCondition);
+                } else {
+                    condOffset += sizeof(xlink2::ResSwitchCondition) - 8;
+                }
                 break;
             }
             case xlink2::ContainerType::Random:
             case xlink2::ContainerType::Random2: {
                 auto resCond = static_cast<const xlink2::ResRandomCondition*>(conditionBase);
-                auto condition = mConditions[i].getAs<xlink2::ContainerType::Random>();
+                auto condition = cond.getAs<xlink2::ContainerType::Random>();
                 condition->weight = resCond->weight;
+                condOffset += sizeof(xlink2::ResRandomCondition);
                 break;
             }
             case xlink2::ContainerType::Blend: {
                 auto resCond = static_cast<const xlink2::ResBlendCondition*>(conditionBase);
-                auto condition = mConditions[i].getAs<xlink2::ContainerType::Blend>();
+                auto condition = cond.getAs<xlink2::ContainerType::Blend>();
                 condition->min = resCond->min;
                 condition->max = resCond->max;
                 condition->blendTypeToMax = resCond->getBlendTypeToMax();
                 condition->blendTypeToMin = resCond->getBlendTypeToMin();
+                condOffset += sizeof(xlink2::ResBlendCondition);
                 break;
             }
             case xlink2::ContainerType::Sequence: {
                 auto resCond = static_cast<const xlink2::ResSequenceCondition*>(conditionBase);
-                auto condition = mConditions[i].getAs<xlink2::ContainerType::Sequence>();
+                auto condition = cond.getAs<xlink2::ContainerType::Sequence>();
                 condition->continueOnFade = resCond->isContinueOnFade;
+                condOffset += sizeof(xlink2::ResSequenceCondition);
                 break;
             }
-            case xlink2::ContainerType::Grid:
-            case xlink2::ContainerType::Jump:
+            case xlink2::ContainerType::Grid: {
+                condOffset += sizeof(xlink2::ResGridCondition);
                 break;
+            }
+            case xlink2::ContainerType::Jump: {
+                condOffset += sizeof(xlink2::ResJumpCondition);
+                break;
+            }
             default:
                 throw ResourceError(std::format("Invalid condition type {:#x}\n", static_cast<u32>(conditionBase->getType())));
         }
-
-        condIdxMap.emplace(offset, i);
+        mConditions.emplace_back(std::move(cond));
         ++i;
     }
 
@@ -248,6 +259,9 @@ bool System::initialize(void* data, size_t size) {
                 param.value = static_cast<u32>(paramIdxMap.at(std::get<u32>(param.value)));
             } else if (param.type == xlink2::ValueReferenceType::String) {
                 param.value = info.strings.at(std::get<u32>(param.value));
+            } else if (param.type == xlink2::ValueReferenceType::Direct) {
+                const auto def = mPDT.getUserParam(param.index);
+                mDirectValues[std::get<u32>(param.value)].type.e = def.getType();
             }
         }
     }
@@ -332,13 +346,13 @@ Condition& System::getCondition(s32 index) {
 }
 
 u32 System::getDirectValueU32(s32 index) const {
-    return mDirectValues[index];
+    return mDirectValues[index].value.u;
 }
 s32 System::getDirectValueS32(s32 index) const {
-    return std::bit_cast<s32, u32>(mDirectValues[index]);
+    return mDirectValues[index].value.s;
 }
 f32 System::getDirectValueF32(s32 index) const {
-    return std::bit_cast<f32, u32>(mDirectValues[index]);
+    return mDirectValues[index].value.f;
 }
 
 bool System::searchUser(const std::string_view& key) const {
