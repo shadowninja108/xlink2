@@ -30,7 +30,7 @@ class User {
 public:
     bool initialize(System* sys, const xlink2::ResUserHeader* res,
                     const InitInfo& info,
-                    std::set<u64>& conditions,
+                    const std::unordered_map<u64, s32>& conditions,
                     std::set<u64>& arrangeParams);
 
     friend class Serializer;

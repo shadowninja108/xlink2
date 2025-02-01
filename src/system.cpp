@@ -148,12 +148,6 @@ bool System::initialize(void* data, size_t size) {
         offset += sizeof(xlink2::ResTriggerOverwriteParam) + sizeof(xlink2::ResParam) * mTriggerOverwriteParams[i].params.size();
     }
 
-    std::set<u64> conditionOffsets{};
-    for (s32 i = 0; i < header->numUsers; ++i) {
-        auto res = mUsers.emplace(accessor.getUserHash(i), User());
-        (*res.first).second.initialize(this, accessor.getResUserHeader(i), info, conditionOffsets, arrangeParams);
-    }
-
     // FIXME: move this before users to skip having to go back and fix condition offsets later
     std::unordered_map<u64, s32> condIdxMap{};
     u64 condOffset = 0;
@@ -224,6 +218,11 @@ bool System::initialize(void* data, size_t size) {
         ++i;
     }
 
+    for (s32 i = 0; i < header->numUsers; ++i) {
+        auto res = mUsers.emplace(accessor.getUserHash(i), User());
+        (*res.first).second.initialize(this, accessor.getResUserHeader(i), info, condIdxMap, arrangeParams);
+    }
+
     mArrangeGroupParams.resize(arrangeParams.size());
     std::unordered_map<u64, s32> paramIdxMap{};
     for (u32 i = 0; const auto offset : arrangeParams) {
@@ -243,16 +242,18 @@ bool System::initialize(void* data, size_t size) {
 
     // fixup condition indices for PropertyTriggers and AssetCallTables
     for (auto& [hash, user] : mUsers) {
-        for (auto& propTrig : user.mPropertyTriggers) {
-            if (propTrig.conditionIdx != -1) {
-                propTrig.conditionIdx = condIdxMap.at(propTrig.conditionIdx);
-            }
-        }
-        for (auto& act : user.mAssetCallTables) {
-            if (act.conditionIdx != -1) {
-                act.conditionIdx = condIdxMap.at(act.conditionIdx);
-            }
-        }
+        // for (auto& propTrig : user.mPropertyTriggers) {
+        //     if (propTrig.conditionIdx != -1) {
+        //         std::cout << std::format("{:#x}\n", propTrig.conditionIdx);
+        //         propTrig.conditionIdx = condIdxMap.at(propTrig.conditionIdx);
+        //     }
+        // }
+        // for (auto& act : user.mAssetCallTables) {
+        //     if (act.conditionIdx != -1) {
+        //         std::cout << std::format("{:#x}\n", act.conditionIdx);
+        //         act.conditionIdx = condIdxMap.at(act.conditionIdx);
+        //     }
+        // }
 
         for (auto& param : user.mUserParams) {
             if (param.type == xlink2::ValueReferenceType::ArrangeParam) {

@@ -9,7 +9,7 @@ namespace banana {
 
 bool User::initialize(System* sys, const xlink2::ResUserHeader* res,
                       const InitInfo& info,
-                      std::set<u64>& conditions,
+                      const std::unordered_map<u64, s32>& conditions,
                       std::set<u64>& arrangeParams) {
     if (sys == nullptr || res == nullptr) {
         throw InvalidDataError("User initialize input values were null");
@@ -116,8 +116,12 @@ bool User::initialize(System* sys, const xlink2::ResUserHeader* res,
         mPropertyTriggers[i].assetCallTableIdx = propertyTriggers->assetCallTableOffset / sizeof(xlink2::ResAssetCallTable);
         // write this temporarily which we will come back and fix once all users are parsed
         if (propertyTriggers->conditionOffset != 0xffffffff) {
-            mPropertyTriggers[i].conditionIdx = propertyTriggers->conditionOffset;
-            conditions.emplace(propertyTriggers->conditionOffset);
+            const auto res = conditions.find(propertyTriggers->conditionOffset);
+            if (res == conditions.end()) {
+                mPropertyTriggers[i].conditionIdx = -1;
+            } else { 
+                mPropertyTriggers[i].conditionIdx = res->second;
+            }
         } else {
             mPropertyTriggers[i].conditionIdx = -1;
         }
@@ -159,8 +163,12 @@ bool User::initialize(System* sys, const xlink2::ResUserHeader* res,
             mAssetCallTables[i].assetParamIdx = info.assetParams.at(act->paramOffset);
         }
         if (act->conditionOffset != 0xffffffff) {
-            mAssetCallTables[i].conditionIdx = act->conditionOffset;
-            conditions.emplace(act->conditionOffset);
+            const auto res = conditions.find(act->conditionOffset);
+            if (res == conditions.end()) {
+                mAssetCallTables[i].conditionIdx = -1;
+            } else { 
+                mAssetCallTables[i].conditionIdx = res->second;
+            }
         } else {
             mAssetCallTables[i].conditionIdx = -1;
         }

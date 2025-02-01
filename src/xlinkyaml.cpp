@@ -421,6 +421,8 @@ void System::dumpAssetCallTable(LibyamlEmitterWithStorage<std::string>& emitter,
     emitter.EmitInt(act.assetIndex);
     emitter.EmitString("IsContainer");
     emitter.EmitBool((act.flag & 1) == 1);
+    emitter.EmitString("Flag");
+    emitter.EmitInt(act.flag);
     emitter.EmitString("Duration");
     emitter.EmitInt(act.duration);
     emitter.EmitString("ParentIndex");
@@ -1119,7 +1121,7 @@ void System::loadContainer(Container& container, const c4::yml::ConstNodeRef& no
 void System::loadAssetCallTable(AssetCallTable& act, const c4::yml::ConstNodeRef& node) {
     act.keyName = addString(*FindParseScalar<std::string>("KeyName", node));
     act.assetIndex = static_cast<u16>(*FindParseScalar<u64>("AssetIndex", node)); // this field isn't necessary so maybe we should axe it?
-    act.flag = *FindParseScalar<bool>("IsContainer", node) ? 1 : 0;
+    act.flag = (*FindParseScalar<bool>("IsContainer", node) ? 1 : 0) | static_cast<u16>(*FindParseScalar<u64>("Flag", node));
     act.duration = static_cast<s32>(*FindParseScalar<u64>("Duration", node));
     act.parentIndex = static_cast<s32>(*FindParseScalar<u64>("ParentIndex", node));
     act.guid = static_cast<u32>(*FindParseScalar<u64>("GUID", node));
