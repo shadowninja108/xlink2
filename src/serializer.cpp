@@ -128,7 +128,7 @@ const xlink2::ResourceHeader Serializer::calcOffsets() {
         for (u16 i = 0; const auto& act : user.mAssetCallTables) {
             if (!act.isContainer())
                 ++assetCount;
-            info.assetIdMap.emplace(std::move(AssetKey{act.keyName, i}), i);
+            info.assetIdMap.emplace(std::move(AssetKey{act.keyName, act.conditionIdx, i}), i);
             ++i;
         }
         s32 randomCount = 0;

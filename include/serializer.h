@@ -73,11 +73,15 @@ public:
 private:
     struct AssetKey {
         std::string_view key;
+        s32 condIndex;
         s32 index;
 
         bool operator<(const AssetKey& other) const {
             if (this->key == other.key) {
-                return this->index < other.index;
+                if (this->condIndex == other.condIndex) {
+                    return this->index < other.index;
+                }
+                return this->condIndex < other.condIndex;
             }
             return this->key < other.key;
         }
