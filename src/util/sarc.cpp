@@ -8,7 +8,7 @@ const std::vector<u8> Archive::cNullFile = {};
 
 bool Archive::loadArchive(const std::string& path) {
     std::vector<u8> buffer{};
-    if (!loadFileWithDecomp(path, buffer) || buffer.size() == 0)
+    if (!loadFileWithDecomp(path, buffer) || buffer.empty())
         return false;
 
     auto header = reinterpret_cast<const ResArchiveHeader*>(buffer.data());
@@ -34,7 +34,7 @@ bool Archive::loadArchive(const std::string& path) {
         const std::string_view filename = filenames;
         const u32 hash = calcHash(filenames, sfat->hashMult);
         u32 low = 0;
-        u32 high = sfat->fileCount - 1;
+        u32 high = sfat->fileCount - 1u;
         while (low <= high) {
             const u32 middle = (low + high) / 2;
             auto file = files[middle];

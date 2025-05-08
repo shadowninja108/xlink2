@@ -8,7 +8,9 @@ namespace banana {
 
 struct ActionTrigger {
     u32 guid;
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
     u32 unk;
+#endif
     bool triggerOnce;
     bool fade;
     bool alwaysTrigger;
@@ -23,9 +25,11 @@ struct ActionTrigger {
 
 struct Action {
     std::string_view actionName;
-    s16 actionTriggerStartIdx;
-    s16 actionTriggerCount;
+    xlink2::ResAction::IndexType actionTriggerStartIdx;
+    xlink2::ResAction::IndexType actionTriggerCount;
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
     bool enableMatchStart;
+#endif
 };
 
 struct ActionSlot {

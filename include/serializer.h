@@ -89,9 +89,9 @@ private:
 
     struct UserInfo {
         std::map<AssetKey, u16> assetIdMap{};
-        std::vector<u64> containerOffsets{};
-        u64 totalSize;
-        u64 triggerTableOffset;
+        std::vector<TargetPointer> containerOffsets{};
+        size_t totalSize;
+        TargetPointer triggerTableOffset;
         s32 assetCount;
         s32 randomContainerCount;
     };
@@ -100,18 +100,18 @@ private:
     void writeParamDefine(const ParamDefine&);
     void writePDT();
     void writeParam(const Param&);
-    void writeUser(const User&, const u32);
+    void writeUser(const User&, u32);
 
     System* mSystem = nullptr;
     size_t mOffset = 0;
     std::vector<u8> mData{};
-    std::unordered_map<std::string_view, u64> mPDTStringOffsets{};
-    std::unordered_map<std::string_view, u64> mStringOffsets{};
-    std::vector<u64> mConditionOffsets{};
-    std::vector<u64> mTriggerParamOffsets{};
-    std::vector<u64> mAssetParamOffsets{};
-    std::vector<u64> mArrangeGroupParamOffsets{};
-    std::map<u32, u64> mUserOffsets{};
+    std::unordered_map<std::string_view, TargetPointer> mPDTStringOffsets{};
+    std::unordered_map<std::string_view, TargetPointer> mStringOffsets{};
+    std::vector<TargetPointer> mConditionOffsets{};
+    std::vector<TargetPointer> mTriggerParamOffsets{};
+    std::vector<TargetPointer> mAssetParamOffsets{};
+    std::vector<TargetPointer> mArrangeGroupParamOffsets{};
+    std::map<u32, TargetPointer> mUserOffsets{};
     std::map<u32, UserInfo> mUserInfo{};
     size_t mPDTNameTableSize;
 };

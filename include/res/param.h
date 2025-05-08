@@ -66,7 +66,7 @@ struct ResTriggerOverwriteParam {
         if (!hasResParam(type))
             return -1;
 
-        return ::util::countOnBit(values, type) - 1;
+        return static_cast<s32>(::util::countOnBit(values, type) - 1u);
     }
 };
 
@@ -81,7 +81,7 @@ struct ResAssetParam {
         if (!hasResParam(type))
             return -1;
 
-        return ::util::countOnBit(values, type) - 1;
+        return static_cast<s32>(::util::countOnBit(values, type) - 1u);
     }
 };
 

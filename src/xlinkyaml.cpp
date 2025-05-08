@@ -30,7 +30,7 @@ void System::dumpCurve(LibyamlEmitterWithStorage<std::string>& emitter, const Cu
         LibyamlEmitter::SequenceScope seqScope{emitter, {}, curve.points.size() > 5 ? YAML_BLOCK_SEQUENCE_STYLE
                                                                                     : YAML_FLOW_SEQUENCE_STYLE};
         for (const auto& point : curve.points) {
-            LibyamlEmitter::MappingScope scope{emitter, {}, YAML_FLOW_MAPPING_STYLE};
+            LibyamlEmitter::MappingScope pointScope{emitter, {}, YAML_FLOW_MAPPING_STYLE};
             emitter.EmitString("x");
             emitter.EmitFloat(point.x);
             emitter.EmitString("y");
@@ -264,14 +264,18 @@ void System::dumpCondition(LibyamlEmitterWithStorage<std::string>& emitter, cons
             emitter.EmitInt(cond->continueOnFade);
             break;
         }
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
         case Type::Grid: {
             LibyamlEmitter::MappingScope scope{emitter, "!grid", YAML_BLOCK_MAPPING_STYLE};
             break;
         }
+#endif
+#if XLINK_TARGET_IS_TOTK
         case Type::Jump: {
             LibyamlEmitter::MappingScope scope{emitter, "!jump", YAML_BLOCK_MAPPING_STYLE};
             break;
         }
+#endif
         default:
             throw InvalidDataError(std::format("Invalid condition type! {:#x}", static_cast<u32>(condition.parentContainerType)));
     }
@@ -285,20 +289,25 @@ void System::dumpContainer(LibyamlEmitterWithStorage<std::string>& emitter, cons
             const auto param = container.getAs<Type::Switch>();
             emitter.EmitString("ValueName");
             emitter.EmitString(param->actionSlotName);
-            emitter.EmitString("Unknown");
-            emitter.EmitInt(param->unk);
             emitter.EmitString("PropertyIndex");
             emitter.EmitInt(param->propertyIndex);
             emitter.EmitString("IsGlobal");
             emitter.EmitBool(param->isGlobal);
-            emitter.EmitString("IsActionTrigger");
-            emitter.EmitBool(param->isActionTrigger);
             emitter.EmitString("ChildContainerBaseIndex");
             emitter.EmitInt(container.childContainerStartIdx);
             emitter.EmitString("ChildContainerCount");
             emitter.EmitInt(container.childCount);
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
+            emitter.EmitString("Unknown");
+            emitter.EmitInt(param->unk);
+            emitter.EmitString("IsActionTrigger");
+            emitter.EmitBool(param->isActionTrigger);
             emitter.EmitString("IsNeedObserve");
             emitter.EmitBool(container.isNeedObserve);
+#else
+            emitter.EmitString("WatchPropertyId");
+            emitter.EmitInt(param->watchPropertyId);
+#endif
             break;
         }
         case Type::Random: {
@@ -307,8 +316,10 @@ void System::dumpContainer(LibyamlEmitterWithStorage<std::string>& emitter, cons
             emitter.EmitInt(container.childContainerStartIdx);
             emitter.EmitString("ChildContainerCount");
             emitter.EmitInt(container.childCount);
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
             emitter.EmitString("IsNeedObserve");
             emitter.EmitBool(container.isNeedObserve);
+#endif
             break;
         }
         case Type::Random2: {
@@ -317,12 +328,15 @@ void System::dumpContainer(LibyamlEmitterWithStorage<std::string>& emitter, cons
             emitter.EmitInt(container.childContainerStartIdx);
             emitter.EmitString("ChildContainerCount");
             emitter.EmitInt(container.childCount);
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
             emitter.EmitString("IsNeedObserve");
             emitter.EmitBool(container.isNeedObserve);
+#endif
             break;
         }
         case Type::Blend: {
             LibyamlEmitter::MappingScope scope{emitter, "!blend", YAML_BLOCK_MAPPING_STYLE};
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
             if (container.isNotBlendAll) {
                 const auto param = container.getAs<Type::Blend, true>();
                 emitter.EmitString("ValueName");
@@ -336,12 +350,13 @@ void System::dumpContainer(LibyamlEmitterWithStorage<std::string>& emitter, cons
                 emitter.EmitString("IsActionTrigger");
                 emitter.EmitBool(param->isActionTrigger);
             }
+            emitter.EmitString("IsNeedObserve");
+            emitter.EmitBool(container.isNeedObserve);
+#endif
             emitter.EmitString("ChildContainerBaseIndex");
             emitter.EmitInt(container.childContainerStartIdx);
             emitter.EmitString("ChildContainerCount");
             emitter.EmitInt(container.childCount);
-            emitter.EmitString("IsNeedObserve");
-            emitter.EmitBool(container.isNeedObserve);
             break;
         }
         case Type::Sequence: {
@@ -350,11 +365,15 @@ void System::dumpContainer(LibyamlEmitterWithStorage<std::string>& emitter, cons
             emitter.EmitInt(container.childContainerStartIdx);
             emitter.EmitString("ChildContainerCount");
             emitter.EmitInt(container.childCount);
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
             emitter.EmitString("IsNeedObserve");
             emitter.EmitBool(container.isNeedObserve);
+#endif
             break;
         }
-        case Type::Grid: {LibyamlEmitter::MappingScope scope{emitter, "!grid", YAML_BLOCK_MAPPING_STYLE};
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
+        case Type::Grid: {
+            LibyamlEmitter::MappingScope scope{emitter, "!grid", YAML_BLOCK_MAPPING_STYLE};
             const auto param = container.getAs<Type::Grid>();;
             emitter.EmitString("PropertyName1");
             emitter.EmitString(param->propertyName1);
@@ -397,6 +416,8 @@ void System::dumpContainer(LibyamlEmitterWithStorage<std::string>& emitter, cons
             emitter.EmitBool(container.isNeedObserve);
             break;
         }
+#endif
+#if XLINK_TARGET_IS_TOTK
         case Type::Jump: {
             LibyamlEmitter::MappingScope scope{emitter, "!jump", YAML_BLOCK_MAPPING_STYLE};
             emitter.EmitString("ChildContainerBaseIndex");
@@ -407,6 +428,7 @@ void System::dumpContainer(LibyamlEmitterWithStorage<std::string>& emitter, cons
             emitter.EmitBool(container.isNeedObserve);
             break;
         }
+#endif
         default:
             throw InvalidDataError(std::format("Invalid condition type! {:#x}", static_cast<u32>(container.type)));
     }
@@ -457,8 +479,10 @@ void System::dumpAction(LibyamlEmitterWithStorage<std::string>& emitter, const A
     emitter.EmitInt(action.actionTriggerStartIdx);
     emitter.EmitString("TriggerCount");
     emitter.EmitInt(action.actionTriggerCount);
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
     emitter.EmitString("EnableMatchStart");
     emitter.EmitBool(action.enableMatchStart);
+#endif
 }
 
 void System::dumpActionTrigger(LibyamlEmitterWithStorage<std::string>& emitter, const ActionTrigger& trigger) const {
@@ -466,8 +490,10 @@ void System::dumpActionTrigger(LibyamlEmitterWithStorage<std::string>& emitter, 
 
     emitter.EmitString("GUID");
     emitter.EmitScalar(std::format("{:#010x}", trigger.guid), false, false, "!u");
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
     emitter.EmitString("Unknown");
     emitter.EmitInt(trigger.unk);
+#endif
     emitter.EmitString("TriggerOnce");
     emitter.EmitBool(trigger.triggerOnce);
     emitter.EmitString("IsFade");
@@ -1020,14 +1046,19 @@ void System::loadCondition(Condition& condition, const c4::yml::ConstNodeRef& no
             c->continueOnFade = static_cast<s32>(*FindParseScalar<u64>("ContinueOnFade", node));
             break;
         }
+
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
         case 0x35e7f782: { // !grid
             condition.parentContainerType = xlink2::ContainerType::Grid;
             break;
         }
+#endif
+#if XLINK_TARGET_IS_TOTK
         case 0xbc7428a3: { // !jump
             condition.parentContainerType = xlink2::ContainerType::Jump;
             break;
         }
+#endif
         default: {
             throw ParseError(std::format("Invalid condition tag: {:#010x}", util::calcCRC32(tag)));
         }
@@ -1042,10 +1073,13 @@ void System::loadContainer(Container& container, const c4::yml::ConstNodeRef& no
             auto c = container.getAs<xlink2::ContainerType::Switch>();
             container.type = xlink2::ContainerType::Switch;
             c->actionSlotName = addString(*FindParseScalar<std::string>("ValueName", node));
-            c->unk = static_cast<s32>(*FindParseScalar<u64>("Unknown", node));
             c->propertyIndex = static_cast<s16>(*FindParseScalar<u64>("PropertyIndex", node));
             c->isGlobal = *FindParseScalar<bool>("IsGlobal", node);
+            c->watchPropertyId = static_cast<s32>(*FindParseScalar<u64>("WatchPropertyId", node));
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
+            c->unk = static_cast<s32>(*FindParseScalar<u64>("Unknown", node));
             c->isActionTrigger = *FindParseScalar<bool>("IsActionTrigger", node);
+#endif
             break;
         }
         case 0x535f9620: { // !random
@@ -1058,6 +1092,7 @@ void System::loadContainer(Container& container, const c4::yml::ConstNodeRef& no
         }
         case 0x108df105: { // !blend
             container.type = xlink2::ContainerType::Blend;
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
             container.isNotBlendAll = false;
             if (node.num_children() > 3) { // type 2 blend
                 container.isNotBlendAll = true;
@@ -1068,12 +1103,14 @@ void System::loadContainer(Container& container, const c4::yml::ConstNodeRef& no
                 c->isGlobal = *FindParseScalar<bool>("IsGlobal", node);
                 c->isActionTrigger = *FindParseScalar<bool>("IsActionTrigger", node);
             }
+#endif
             break;
         }
         case 0x44278a0c: { // !sequence
             container.type = xlink2::ContainerType::Sequence;
             break;
         }
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
         case 0x35e7f782: { // !grid
             auto c = container.getAs<xlink2::ContainerType::Grid>();
             container.type = xlink2::ContainerType::Grid;
@@ -1104,10 +1141,13 @@ void System::loadContainer(Container& container, const c4::yml::ConstNodeRef& no
             ParseSequence(indices, &c->indices, parseS32Array);
             break;
         }
+#endif
+#if XLINK_TARGET_IS_TOTK
         case 0xbc7428a3: { // !jump
             container.type = xlink2::ContainerType::Jump;
             break;
         }
+#endif
         default: {
             throw ParseError(std::format("Invalid container tag: {:#010x}", util::calcCRC32(tag)));
         }
@@ -1115,7 +1155,9 @@ void System::loadContainer(Container& container, const c4::yml::ConstNodeRef& no
 
     container.childContainerStartIdx = static_cast<s32>(*FindParseScalar<u64>("ChildContainerBaseIndex", node));
     container.childCount = static_cast<s32>(*FindParseScalar<u64>("ChildContainerCount", node));
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
     container.isNeedObserve = *FindParseScalar<bool>("IsNeedObserve", node);
+#endif
 }
 
 void System::loadAssetCallTable(AssetCallTable& act, const c4::yml::ConstNodeRef& node) {
@@ -1140,12 +1182,16 @@ void System::loadAction(Action& action, const c4::yml::ConstNodeRef& node) {
     action.actionName = addString(*FindParseScalar<std::string>("ActionName", node));
     action.actionTriggerStartIdx = static_cast<s16>(*FindParseScalar<u64>("TriggerBaseIndex", node));
     action.actionTriggerCount = static_cast<s16>(*FindParseScalar<u64>("TriggerCount", node));
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
     action.enableMatchStart = *FindParseScalar<bool>("EnableMatchStart", node);
+#endif
 }
 
 void System::loadActionTrigger(ActionTrigger& trigger, const c4::yml::ConstNodeRef& node) {
     trigger.guid = static_cast<u32>(*FindParseScalar<u64>("GUID", node));
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
     trigger.unk = static_cast<u32>(*FindParseScalar<u64>("Unknown", node));
+#endif
     trigger.triggerOnce = *FindParseScalar<bool>("TriggerOnce", node);
     trigger.fade = *FindParseScalar<bool>("IsFade", node);
     trigger.alwaysTrigger = *FindParseScalar<bool>("AlwaysTrigger", node);
@@ -1311,7 +1357,7 @@ bool System::loadYAML(std::string_view text) {
 
     const auto res = ParseScalarAs<u64>(version);
     if (res != std::nullopt) {
-        mVersion = *res;
+        mVersion = static_cast<u32>(*res);
     } else {
         std::cerr << "Failed to parse version!\n";
         return false;
@@ -1450,8 +1496,8 @@ bool System::loadYAML(std::string_view text) {
         } else {
             hash = util::calcCRC32(*ParseScalarKeyAs<std::string>(child));
         }
-        auto res = mUsers.emplace(hash, User());
-        loadUser((*res.first).second, child /*, valueMap*/);
+        auto newUser = mUsers.emplace(hash, User());
+        loadUser((*newUser.first).second, child /*, valueMap*/);
     }
 
     const auto assets = node.find_child("AssetParams");

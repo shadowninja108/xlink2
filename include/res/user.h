@@ -6,13 +6,11 @@ namespace xlink2 {
 
 struct ResUserHeader {
     u32 isSetup; // internal for runtime, ignore
-#if XLINK_TARGET == TOTK
+#if XLINK_TARGET_IS_TOTK
     s16 localPropertyCount;
     u16 unk;
-#elif XLINK_TARGET == S3
-    s32 localPropertyCount;
 #else
-    static_assert(false, "Invalid XLINK_TARGET!");
+    s32 localPropertyCount;
 #endif
     s32 callCount;
     s32 assetCount;
@@ -23,8 +21,7 @@ struct ResUserHeader {
     s32 propertyCount;
     s32 propertyTriggerCount;
     s32 alwaysTriggerCount;
-    char padding[4];
-    u64 triggerTableOffset;
+    TargetPointer triggerTableOffset;
 };
 
 } // namespace xlink2

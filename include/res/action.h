@@ -8,19 +8,27 @@ namespace xlink2 {
 // externally, ActionSlots have an associated Action
 // e.g. ActionSlot AS[0] could have the Action Crouch
 struct ResActionSlot {
-    u64 nameOffset;
+    TargetPointer nameOffset;
     s16 actionStartIdx;
     s16 actionEndIdx;
-    char _padding[4];
 };
 
 // associated with a group of ResActionTriggers
 struct ResAction {
-    u64 nameOffset;
-    s16 triggerStartIdx;
+
+    TargetPointer nameOffset;
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
+    using IndexType = s16;
+
+    IndexType triggerStartIdx;
     bool enableMatchStart;
     char padding;
-    u32 triggerEndIdx; // may just be padding
+    IndexType triggerEndIdx; // may just be padding
+#elif XLINK_TARGET_IS_BLITZ
+    using IndexType = u32;
+    IndexType triggerStartIdx;
+    IndexType triggerEndIdx;
+#endif
 };
 
 } // namespace xlink2

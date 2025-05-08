@@ -9,8 +9,8 @@ namespace banana {
 
 bool User::initialize(System* sys, const xlink2::ResUserHeader* res,
                       const InitInfo& info,
-                      const std::unordered_map<u64, s32>& conditions,
-                      std::set<u64>& arrangeParams) {
+                      const std::unordered_map<TargetPointer, s32>& conditions,
+                      std::set<TargetPointer>& arrangeParams) {
     if (sys == nullptr || res == nullptr) {
         throw InvalidDataError("User initialize input values were null");
     }
@@ -26,183 +26,197 @@ bool User::initialize(System* sys, const xlink2::ResUserHeader* res,
     mPropertyTriggers.resize(res->propertyTriggerCount);
     mAlwaysTriggers.resize(res->alwaysTriggerCount);
 
-#if XLINK_TARGET == TOTK
+#if XLINK_TARGET_IS_TOTK
     mUnknown = res->unk;
 #endif
 
-    const u64* locals = reinterpret_cast<const u64*>(res + 1);
-    for (u32 i = 0; i < mLocalProperties.size(); ++i) {
+    auto locals = reinterpret_cast<const TargetPointer*>(res + 1);
+    for (size_t i = 0; i < mLocalProperties.size(); ++i) {
         mLocalProperties[i] = info.strings.at(*locals);
         ++locals;
     }
 
-    const xlink2::ResParam* params = reinterpret_cast<const xlink2::ResParam*>(locals);
-    for (u32 i = 0; i < mUserParams.size(); ++i) {
-        mUserParams[i].type = params->getValueReferenceType();
-        mUserParams[i].value = params->getValue();
+    const auto* params = reinterpret_cast<const xlink2::ResParam*>(locals);
+    for (size_t i = 0; i < mUserParams.size(); ++i) {
+        auto& paramModel = mUserParams[i];
+        paramModel.type = params->getValueReferenceType();
+        paramModel.value = params->getValue();
         if (params->getValueReferenceType() == xlink2::ValueReferenceType::ArrangeParam) {
             arrangeParams.insert(params->getValue());
         }
-        mUserParams[i].index = i;
+        paramModel.index = static_cast<s32>(i);
         ++params;
     }
 
     const u16* id_ptr = reinterpret_cast<const u16*>(params);
-    for (u32 i = 0; i < mSortedAssetIds.size(); ++i) {
-        mSortedAssetIds[i] = *id_ptr;
+    for (u16& mSortedAssetId : mSortedAssetIds) {
+        mSortedAssetId = *id_ptr;
         ++id_ptr;
     }
 
     auto actionSlots = reinterpret_cast<const xlink2::ResActionSlot*>(reinterpret_cast<uintptr_t>(res) + res->triggerTableOffset);
-    for (u32 i = 0; i < mActionSlots.size(); ++i) {
-        mActionSlots[i].actionSlotName = info.strings.at(actionSlots->nameOffset);
-        mActionSlots[i].actionStartIdx = actionSlots->actionStartIdx;
-        mActionSlots[i].actionCount = actionSlots->actionEndIdx - actionSlots->actionStartIdx;
+    for (auto& actionSlotModel : mActionSlots) {
+        actionSlotModel.actionSlotName = info.strings.at(actionSlots->nameOffset);
+        actionSlotModel.actionStartIdx = actionSlots->actionStartIdx;
+        actionSlotModel.actionCount = static_cast<s16>(actionSlots->actionEndIdx - actionSlots->actionStartIdx);
         ++actionSlots;
     }
 
     auto actions = reinterpret_cast<const xlink2::ResAction*>(actionSlots);
-    for (u32 i = 0; i < mActions.size(); ++i) {
-        mActions[i].actionName = info.strings.at(actions->nameOffset);
-        mActions[i].actionTriggerStartIdx = actions->triggerStartIdx;
-        mActions[i].actionTriggerCount = static_cast<s16>(actions->triggerEndIdx - actions->triggerStartIdx);
+    for (auto& actionModel : mActions) {
+        actionModel.actionName = info.strings.at(actions->nameOffset);
+        actionModel.actionTriggerStartIdx = actions->triggerStartIdx;
+        actionModel.actionTriggerCount = static_cast<s16>(actions->triggerEndIdx - actions->triggerStartIdx);
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
         mActions[i].enableMatchStart = actions->enableMatchStart;
+#endif
         ++actions;
     }
 
     auto actionTriggers = reinterpret_cast<const xlink2::ResActionTrigger*>(actions);
-    for (u32 i = 0; i < mActionTriggers.size(); ++i) {
-        mActionTriggers[i].guid = actionTriggers->guid;
-        mActionTriggers[i].unk = actionTriggers->unk;
-        mActionTriggers[i].triggerOnce = actionTriggers->isFlagSet(xlink2::ResActionTrigger::Flag::TriggerOnce);
-        mActionTriggers[i].fade = actionTriggers->isFlagSet(xlink2::ResActionTrigger::Flag::Fade);
-        mActionTriggers[i].alwaysTrigger = actionTriggers->isFlagSet(xlink2::ResActionTrigger::Flag::AlwaysTrigger);
-        mActionTriggers[i].nameMatch = actionTriggers->isFlagSet(xlink2::ResActionTrigger::Flag::NameMatch);
-        if (mActionTriggers[i].nameMatch) {
-            mActionTriggers[i].previousActionName = info.strings.at(actionTriggers->previousActionNameOffset);
+    for (auto& triggerModel : mActionTriggers) {
+        triggerModel.guid = actionTriggers->guid;
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
+        triggerModel.unk = actionTriggers->unk;
+#endif
+        triggerModel.triggerOnce = actionTriggers->isFlagSet(xlink2::ResActionTrigger::Flag::TriggerOnce);
+        triggerModel.fade = actionTriggers->isFlagSet(xlink2::ResActionTrigger::Flag::Fade);
+        triggerModel.alwaysTrigger = actionTriggers->isFlagSet(xlink2::ResActionTrigger::Flag::AlwaysTrigger);
+        triggerModel.nameMatch = actionTriggers->isFlagSet(xlink2::ResActionTrigger::Flag::NameMatch);
+        if (triggerModel.nameMatch) {
+            triggerModel.previousActionName = info.strings.at(actionTriggers->previousActionNameOffset);
         } else {
-            mActionTriggers[i].startFrame = actionTriggers->startFrame;
+            triggerModel.startFrame = actionTriggers->startFrame;
         }
-        mActionTriggers[i].endFrame = actionTriggers->endFrame;
-        if (actionTriggers->overwriteParamOffset != 0xffffffff) {
-            mActionTriggers[i].triggerOverwriteIdx = info.triggerParams.at(actionTriggers->overwriteParamOffset);
+        triggerModel.endFrame = actionTriggers->endFrame;
+        if (static_cast<s32>(actionTriggers->overwriteParamOffset) != -1) {
+            triggerModel.triggerOverwriteIdx = info.triggerParams.at(actionTriggers->overwriteParamOffset);
         } else {
-            mActionTriggers[i].triggerOverwriteIdx = -1;
+            triggerModel.triggerOverwriteIdx = -1;
         }
-        mActionTriggers[i].overwriteHash = actionTriggers->overwriteHash;
-        mActionTriggers[i].assetCallIdx = actionTriggers->assetCallTableOffset / sizeof(xlink2::ResAssetCallTable);
+        triggerModel.overwriteHash = actionTriggers->overwriteHash;
+        triggerModel.assetCallIdx = static_cast<s32>(actionTriggers->assetCallTableOffset / sizeof(xlink2::ResAssetCallTable));
         ++actionTriggers;
     }
 
     auto properties = reinterpret_cast<const xlink2::ResProperty*>(actionTriggers);
-    for (u32 i = 0; i < mProperties.size(); ++i) {
-        mProperties[i].propertyName = info.strings.at(properties->nameOffset);
-        mProperties[i].propTriggerStartIdx = properties->triggerStartIdx;
-        mProperties[i].propTriggerCount = properties->triggerEndIdx - properties->triggerStartIdx;
-        mProperties[i].isGlobal = properties->isGlobal;
+    for (auto& propertyModel : mProperties) {
+        propertyModel.propertyName = info.strings.at(properties->nameOffset);
+        propertyModel.propTriggerStartIdx = properties->triggerStartIdx;
+        propertyModel.propTriggerCount = properties->triggerEndIdx - properties->triggerStartIdx;
+        propertyModel.isGlobal = properties->isGlobal;
         ++properties;
     }
 
     auto propertyTriggers = reinterpret_cast<const xlink2::ResPropertyTrigger*>(properties);
-    for (u32 i = 0; i < mPropertyTriggers.size(); ++i) {
-        mPropertyTriggers[i].guid = propertyTriggers->guid;
-        mPropertyTriggers[i].flag = propertyTriggers->flag;
-        mPropertyTriggers[i].overwriteHash = propertyTriggers->overwriteHash;
-        if (propertyTriggers->overwriteParamOffset != 0xffffffff) {
-            mPropertyTriggers[i].triggerOverwriteIdx = info.triggerParams.at(propertyTriggers->overwriteParamOffset);
+    for (auto& triggerModel : mPropertyTriggers) {
+        triggerModel.guid = propertyTriggers->guid;
+        triggerModel.flag = propertyTriggers->flag;
+        triggerModel.overwriteHash = propertyTriggers->overwriteHash;
+        if (static_cast<s32>(propertyTriggers->overwriteParamOffset) != -1) {
+            triggerModel.triggerOverwriteIdx = info.triggerParams.at(propertyTriggers->overwriteParamOffset);
         } else {
-            mPropertyTriggers[i].triggerOverwriteIdx = -1;
+            triggerModel.triggerOverwriteIdx = -1;
         }
-        mPropertyTriggers[i].assetCallTableIdx = propertyTriggers->assetCallTableOffset / sizeof(xlink2::ResAssetCallTable);
+        triggerModel.assetCallTableIdx = static_cast<s32>(propertyTriggers->assetCallTableOffset / sizeof(xlink2::ResAssetCallTable));
         // write this temporarily which we will come back and fix once all users are parsed
-        if (propertyTriggers->conditionOffset != 0xffffffff) {
-            const auto res = conditions.find(propertyTriggers->conditionOffset);
-            if (res == conditions.end()) {
-                mPropertyTriggers[i].conditionIdx = -1;
+        if (static_cast<s32>(propertyTriggers->conditionOffset) != -1) {
+            const auto foundCond = conditions.find(propertyTriggers->conditionOffset);
+            if (foundCond == conditions.end()) {
+                triggerModel.conditionIdx = -1;
             } else { 
-                mPropertyTriggers[i].conditionIdx = res->second;
+                triggerModel.conditionIdx = foundCond->second;
             }
         } else {
-            mPropertyTriggers[i].conditionIdx = -1;
+            triggerModel.conditionIdx = -1;
         }
         ++propertyTriggers;
     }
 
     auto alwaysTriggers = reinterpret_cast<const xlink2::ResAlwaysTrigger*>(propertyTriggers);
-    for (u32 i = 0; i < mAlwaysTriggers.size(); ++i) {
-        mAlwaysTriggers[i].guid = alwaysTriggers->guid;
-        mAlwaysTriggers[i].flag = alwaysTriggers->flag;
-        mAlwaysTriggers[i].overwriteHash = alwaysTriggers->overwriteHash;
-        mAlwaysTriggers[i].assetCallIdx = alwaysTriggers->assetCallTableOffset / sizeof(xlink2::ResAssetCallTable);
-        if (alwaysTriggers->overwriteParamOffset != 0xffffffff) {
-            mAlwaysTriggers[i].triggerOverwriteIdx = info.triggerParams.at(alwaysTriggers->overwriteParamOffset);
+    for (auto& triggerModel : mAlwaysTriggers) {
+        triggerModel.guid = alwaysTriggers->guid;
+        triggerModel.flag = alwaysTriggers->flag;
+        triggerModel.overwriteHash = alwaysTriggers->overwriteHash;
+        triggerModel.assetCallIdx = static_cast<s32>(alwaysTriggers->assetCallTableOffset / sizeof(xlink2::ResAssetCallTable));
+        if (static_cast<s32>(alwaysTriggers->overwriteParamOffset) != -1) {
+            triggerModel.triggerOverwriteIdx = info.triggerParams.at(alwaysTriggers->overwriteParamOffset);
         } else {
-            mAlwaysTriggers[i].triggerOverwriteIdx = -1;
+            triggerModel.triggerOverwriteIdx = -1;
         }
         ++alwaysTriggers;
     }
 
     // alignment
-    auto act = reinterpret_cast<const xlink2::ResAssetCallTable*>(id_ptr + mSortedAssetIds.size() % 2);
+    auto actIt = reinterpret_cast<const xlink2::ResAssetCallTable*>(id_ptr + mSortedAssetIds.size() % 2);
 
-    const uintptr_t containers = reinterpret_cast<uintptr_t>(act + res->callCount);
+    const auto containers = reinterpret_cast<uintptr_t>(actIt + res->callCount);
     
-    std::set<u64> containerOffsets{};
-    for (u32 i = 0; i < mAssetCallTables.size(); ++i) {
-        mAssetCallTables[i].keyName = info.strings.at(act->keyNameOffset);
-        mAssetCallTables[i].assetIndex = act->assetIndex;
-        mAssetCallTables[i].flag = act->flag;
-        mAssetCallTables[i].duration = act->duration;
-        mAssetCallTables[i].parentIndex = act->parentIndex;
-        mAssetCallTables[i].guid = act->guid;
-        mAssetCallTables[i].keyNameHash = act->keyNameHash;
-        if (act->isContainer()) {
-            containerOffsets.insert(act->paramOffset);
-            mAssetCallTables[i].containerParamIdx = act->paramOffset;
+    std::set<TargetPointer> containerOffsets{};
+    for (auto& act : mAssetCallTables) {
+        act.keyName = info.strings.at(actIt->keyNameOffset);
+        act.assetIndex = actIt->assetIndex;
+        act.flag = actIt->flag;
+        act.duration = actIt->duration;
+        act.parentIndex = actIt->parentIndex;
+        act.guid = actIt->guid;
+        act.keyNameHash = actIt->keyNameHash;
+        if (actIt->isContainer()) {
+            containerOffsets.insert(actIt->paramOffset);
+            act.containerParamIdx = static_cast<s32>(actIt->paramOffset);
         } else {
-            mAssetCallTables[i].assetParamIdx = info.assetParams.at(act->paramOffset);
+            act.assetParamIdx = info.assetParams.at(actIt->paramOffset);
         }
-        if (act->conditionOffset != 0xffffffff) {
-            const auto res = conditions.find(act->conditionOffset);
-            if (res == conditions.end()) {
-                mAssetCallTables[i].conditionIdx = -1;
+        if (static_cast<s32>(actIt->conditionOffset) != -1) {
+            const auto foundCond = conditions.find(actIt->conditionOffset);
+            if (foundCond == conditions.end()) {
+                act.conditionIdx = -1;
             } else { 
-                mAssetCallTables[i].conditionIdx = res->second;
+                act.conditionIdx = foundCond->second;
             }
         } else {
-            mAssetCallTables[i].conditionIdx = -1;
+            act.conditionIdx = -1;
         }
-        ++act;
+        ++actIt;
     }
 
     mContainers.resize(containerOffsets.size());
-    std::unordered_map<u64, s32> containerIdxMap{};
-    for (u32 i = 0; const auto offset : containerOffsets) {
+    std::unordered_map<TargetPointer, s32> containerIdxMap{};
+    for (size_t i = 0; const auto offset : containerOffsets) {
         auto containerBase = reinterpret_cast<const xlink2::ResContainerParam*>(containers + offset);
-        mContainers[i].type = containerBase->getType();
-        mContainers[i].childContainerStartIdx = containerBase->childStartIdx;
-        mContainers[i].childCount = containerBase->childEndIdx - containerBase->childStartIdx;
-        mContainers[i].isNotBlendAll = containerBase->isNotBlendAll;
-        mContainers[i].isNeedObserve = containerBase->isNeedObserve;
+        auto& containerModel = mContainers[i];
+        containerModel.type = containerBase->getType();
+        containerModel.childContainerStartIdx = containerBase->childStartIdx;
+        containerModel.childCount = containerBase->childEndIdx - containerBase->childStartIdx;
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
+        containerModel.isNotBlendAll = containerBase->isNotBlendAll;
+        containerModel.isNeedObserve = containerBase->isNeedObserve;
+#endif
         switch (containerBase->getType()) {
             case xlink2::ContainerType::Switch: {
                 auto param = static_cast<const xlink2::ResSwitchContainerParam*>(containerBase);
-                auto container = mContainers[i].getAs<xlink2::ContainerType::Switch>();
+                auto* container = containerModel.getAs<xlink2::ContainerType::Switch>();
                 container->isGlobal = param->isGlobal;
-                container->isActionTrigger = param->isActionTrigger;
                 container->actionSlotName = info.strings.at(param->actionSlotNameOffset); // property name if not action trigger
                 container->propertyIndex = param->propertyIndex;
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
+                container->isActionTrigger = param->isActionTrigger;
                 container->unk = param->_00;
+#else
+                container->watchPropertyId = param->watchPropertyId;
+#endif
                 break;
             }
             case xlink2::ContainerType::Random:
             case xlink2::ContainerType::Random2:
                 break;
             case xlink2::ContainerType::Blend: {
-                if (!mContainers[i].isNotBlendAll)
+                /* TODO: ??? */
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
+                if (!containerModel.isNotBlendAll)
                     break;
                 auto param = static_cast<const xlink2::ResBlendContainerParam2*>(containerBase);
-                auto container = mContainers[i].getAs<xlink2::ContainerType::Blend, true>();
+                auto container = containerModel.getAs<xlink2::ContainerType::Blend, true>();
                 container->isGlobal = param->isGlobal;
                 // these can't be action triggers
                 container->isActionTrigger = param->isActionTrigger;
@@ -210,12 +224,14 @@ bool User::initialize(System* sys, const xlink2::ResUserHeader* res,
                 container->propertyIndex = param->propertyIndex;
                 container->unk = param->_00;
                 break;
+#endif
             }
             case xlink2::ContainerType::Sequence:
                 break;
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
             case xlink2::ContainerType::Grid: {
                 auto param = static_cast<const xlink2::ResGridContainerParam*>(containerBase);
-                auto container = mContainers[i].getAs<xlink2::ContainerType::Grid>();
+                auto container = containerModel.getAs<xlink2::ContainerType::Grid>();
                 container->propertyName1 = info.strings.at(param->propertyNameOffset1);
                 container->propertyName2 = info.strings.at(param->propertyNameOffset2);
                 container->propertyIndex1 = param->propertyIndex1;
@@ -235,6 +251,7 @@ bool User::initialize(System* sys, const xlink2::ResUserHeader* res,
             }
             case xlink2::ContainerType::Jump:
                 break;
+#endif
             // Mono is not a valid container type for the resource file
             default:
                 throw ResourceError(std::format("Invalid container type: {:#x}", static_cast<u32>(containerBase->getType())));
@@ -246,9 +263,10 @@ bool User::initialize(System* sys, const xlink2::ResUserHeader* res,
 
     // fixup container indices for each asset call table
     for (auto& act : mAssetCallTables) {
-        if (act.isContainer()) {
-            act.containerParamIdx = containerIdxMap.at(act.containerParamIdx);
-        }
+        if (!act.isContainer())
+            continue;
+
+        act.containerParamIdx = containerIdxMap.at(act.containerParamIdx);
     }
 
     return true;

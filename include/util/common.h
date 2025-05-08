@@ -20,7 +20,7 @@ template <typename T>
 u32 countOnBit(T value, u32 bit) {
     static_assert(std::is_unsigned<T>(), "Can only bit count unsigned values");
     const T mask = ((1u << bit) - 1) | (1u << bit);
-    return std::popcount(static_cast<T>(value & mask));
+    return static_cast<u32>(std::popcount(static_cast<T>(value & mask)));
 }
 
 template <typename T, size_t N, std::enable_if_t<std::is_enum_v<T>>* = nullptr>

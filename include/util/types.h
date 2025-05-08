@@ -17,3 +17,11 @@ using f32 = float;
 using f64 = double;
 
 using size_t = std::size_t;
+
+#if XLINK_BITNESS == 64
+using TargetPointer = u64;
+#elif XLINK_BITNESS == 32
+using TargetPointer = u32;
+#else
+#error "Invalid XLINK_BITNESS!"
+#endif

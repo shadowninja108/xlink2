@@ -87,7 +87,7 @@ bool System::initialize(void* data, size_t size) {
         mDirectValues[i].type.u = static_cast<u32>(-1);
     }
 
-    std::set<u64> arrangeParams{};
+    std::set<TargetPointer> arrangeParams{};
 
     uintptr_t assets = reinterpret_cast<uintptr_t>(accessor.getAssetParamTable());
     uintptr_t start = assets;
@@ -95,17 +95,18 @@ bool System::initialize(void* data, size_t size) {
     for (u32 i = 0; assets < assetsEnd; ++i) {
         auto param = reinterpret_cast<const xlink2::ResAssetParam*>(assets);
         mAssetParams.emplace_back(ParamSet());
-        mAssetParams[i].params.resize(std::popcount(param->values));
+        auto& assetParamModel = mAssetParams[i];
+        assetParamModel.params.resize(std::popcount(param->values));
         auto params = reinterpret_cast<const xlink2::ResParam*>(param + 1);
         u32 paramIdx = 0;
         for (u32 j = 0; j < mPDT.getAssetParamCount(); ++j) {
-            if (paramIdx >= mAssetParams[i].params.size()) {
+            if (paramIdx >= assetParamModel.params.size()) {
                 break;
             }
             if ((param->values >> j & 1) == 1) {
-                mAssetParams[i].params[paramIdx].type = params[paramIdx].getValueReferenceType();
-                mAssetParams[i].params[paramIdx].value = params[paramIdx].getValue();
-                mAssetParams[i].params[paramIdx].index = j;
+                assetParamModel.params[paramIdx].type = params[paramIdx].getValueReferenceType();
+                assetParamModel.params[paramIdx].value = params[paramIdx].getValue();
+                assetParamModel.params[paramIdx].index = j;
                 if (params[paramIdx].getValueReferenceType() == xlink2::ValueReferenceType::ArrangeParam) {
                     arrangeParams.insert(params[paramIdx].getValue());
                 } else if (params[paramIdx].getValueReferenceType() == xlink2::ValueReferenceType::Direct) {
@@ -116,46 +117,49 @@ bool System::initialize(void* data, size_t size) {
             }
         }
         info.assetParams.emplace(assets - start, i);
-        assets += sizeof(xlink2::ResAssetParam) + sizeof(xlink2::ResParam) * mAssetParams[i].params.size();
+        assets += sizeof(xlink2::ResAssetParam) + sizeof(xlink2::ResParam) * assetParamModel.params.size();
     }
 
-    u64 offset = 0;
+    TargetPointer offset = 0;
     for (u32 i = 0; i < mTriggerOverwriteParams.size(); ++i) {
-        auto param = accessor.getTriggerOverwriteParam(offset);
-        mTriggerOverwriteParams[i].params.resize(std::popcount(param->values));
-        auto params = reinterpret_cast<const xlink2::ResParam*>(param + 1);
+        auto overwriteParam = accessor.getTriggerOverwriteParam(offset);
+        auto& triggerParamModel = mTriggerOverwriteParams[i];
+        triggerParamModel.params.resize(std::popcount(overwriteParam->values));
+        auto resParams = reinterpret_cast<const xlink2::ResParam*>(overwriteParam + 1);
         u32 paramIdx = 0;
         // is there a more efficient way of doing this?
         // maybe some bit shifting magic idk
-        for (u32 j = 0; j < mPDT.getTriggerParamCount(); ++j) {
-            if (paramIdx >= mTriggerOverwriteParams[i].params.size()) {
+        for (size_t j = 0; j < mPDT.getTriggerParamCount(); ++j) {
+            if (paramIdx >= triggerParamModel.params.size()) {
                 break;
             }
-            if ((param->values >> j & 1) == 1) {
-                mTriggerOverwriteParams[i].params[paramIdx].type = params[paramIdx].getValueReferenceType();
-                mTriggerOverwriteParams[i].params[paramIdx].value = params[paramIdx].getValue();
-                mTriggerOverwriteParams[i].params[paramIdx].index = j;
-                if (params[paramIdx].getValueReferenceType() == xlink2::ValueReferenceType::ArrangeParam) {
-                    arrangeParams.insert(params[paramIdx].getValue());
-                } else if (params[paramIdx].getValueReferenceType() == xlink2::ValueReferenceType::Direct) {
+            if ((overwriteParam->values >> j & 1) == 1) {
+                auto& paramModel = triggerParamModel.params[paramIdx];
+                auto& resParam = resParams[paramIdx];
+                paramModel.type = resParam.getValueReferenceType();
+                paramModel.value = resParam.getValue();
+                paramModel.index = static_cast<s32>(j);
+                if (resParam.getValueReferenceType() == xlink2::ValueReferenceType::ArrangeParam) {
+                    arrangeParams.insert(resParam.getValue());
+                } else if (resParam.getValueReferenceType() == xlink2::ValueReferenceType::Direct) {
                     const auto def = mPDT.getTriggerParam(j);
-                    mDirectValues[params[paramIdx].getValue()].type.e = def.getType();
+                    mDirectValues[resParam.getValue()].type.e = def.getType();
                 }
                 ++paramIdx;
             }
         }
         info.triggerParams.emplace(offset, i);
-        offset += sizeof(xlink2::ResTriggerOverwriteParam) + sizeof(xlink2::ResParam) * mTriggerOverwriteParams[i].params.size();
+        offset += sizeof(xlink2::ResTriggerOverwriteParam) + sizeof(xlink2::ResParam) * triggerParamModel.params.size();
     }
 
     // FIXME: move this before users to skip having to go back and fix condition offsets later
-    std::unordered_map<u64, s32> condIdxMap{};
-    u64 condOffset = 0;
-    u64 condBase = reinterpret_cast<uintptr_t>(accessor.getCondition(0));
-    u64 condEnd = reinterpret_cast<uintptr_t>(accessor.getString(0));
-    u32 i = 0;
+    std::unordered_map<TargetPointer, s32> condIdxMap{};
+    TargetPointer condOffset = 0;
+    auto condBase = reinterpret_cast<uintptr_t>(accessor.getCondition(0));
+    auto condEnd = reinterpret_cast<uintptr_t>(accessor.getString(0));
+    u32 condI = 0;
     while (condBase + condOffset < condEnd) {
-        condIdxMap.emplace(condOffset, i);
+        condIdxMap.emplace(condOffset, condI);
         Condition cond{};
         auto conditionBase = reinterpret_cast<const xlink2::ResCondition*>(accessor.getCondition(condOffset));
         cond.parentContainerType = conditionBase->getType();
@@ -171,10 +175,20 @@ bool System::initialize(void* data, size_t size) {
                 condition->conditionValue.i = resCond->value.i;
                 // this field only conditionally exists
                 if (condition->propType == xlink2::PropertyType::Enum) {
+
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
                     condition->enumName = info.strings.at(resCond->enumNameOffset);
+#else
+                    condition->enumName = info.strings.at(resCond->value.u);
+#endif
                     condOffset += sizeof(xlink2::ResSwitchCondition);
                 } else {
-                    condOffset += sizeof(xlink2::ResSwitchCondition) - 8;
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
+                    // omit enumNameOffset
+                    condOffset += sizeof(xlink2::ResSwitchCondition) - sizeof(TargetPointer);
+#else
+                    condOffset += sizeof(xlink2::ResSwitchCondition);
+#endif
                 }
                 break;
             }
@@ -203,40 +217,46 @@ bool System::initialize(void* data, size_t size) {
                 condOffset += sizeof(xlink2::ResSequenceCondition);
                 break;
             }
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
             case xlink2::ContainerType::Grid: {
                 condOffset += sizeof(xlink2::ResGridCondition);
                 break;
             }
+#endif
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
             case xlink2::ContainerType::Jump: {
                 condOffset += sizeof(xlink2::ResJumpCondition);
                 break;
             }
+#endif
             default:
                 throw ResourceError(std::format("Invalid condition type {:#x}\n", static_cast<u32>(conditionBase->getType())));
         }
         mConditions.emplace_back(std::move(cond));
-        ++i;
+        ++condI;
     }
 
-    for (s32 i = 0; i < header->numUsers; ++i) {
+    for (size_t i = 0; i < static_cast<size_t>(header->numUsers); ++i) {
         auto res = mUsers.emplace(accessor.getUserHash(i), User());
         (*res.first).second.initialize(this, accessor.getResUserHeader(i), info, condIdxMap, arrangeParams);
     }
 
     mArrangeGroupParams.resize(arrangeParams.size());
-    std::unordered_map<u64, s32> paramIdxMap{};
-    for (u32 i = 0; const auto offset : arrangeParams) {
-        auto count = reinterpret_cast<const u32*>(accessor.getExRegion() + offset);
-        mArrangeGroupParams[i].groups.resize(*count);
+    std::unordered_map<TargetPointer, s32> paramIdxMap{};
+    for (size_t i = 0; const auto paramOffset : arrangeParams) {
+        auto count = reinterpret_cast<const u32*>(accessor.getExRegion() + paramOffset);
+        auto& groupParamModel = mArrangeGroupParams[i];
+        groupParamModel.groups.resize(*count);
         auto params = reinterpret_cast<const xlink2::ArrangeGroupParam*>(count + 1);
         for (u32 j = 0; j < *count; ++j) {
-            mArrangeGroupParams[i].groups[j].groupName = info.strings.at(params->groupNameOffset);
-            mArrangeGroupParams[i].groups[j].limitType = params->limitType;
-            mArrangeGroupParams[i].groups[j].limitThreshold = params->limitThreshold;
-            mArrangeGroupParams[i].groups[j].unk = params->unk;
+            auto& groupModel = groupParamModel.groups[j];
+            groupModel.groupName = info.strings.at(params->groupNameOffset);
+            groupModel.limitType = params->limitType;
+            groupModel.limitThreshold = params->limitThreshold;
+            groupModel.unk = params->unk;
             ++params;
         }
-        paramIdxMap.emplace(offset, i);
+        paramIdxMap.emplace(paramOffset, i);
         ++i;
     }
 
@@ -256,13 +276,19 @@ bool System::initialize(void* data, size_t size) {
         // }
 
         for (auto& param : user.mUserParams) {
-            if (param.type == xlink2::ValueReferenceType::ArrangeParam) {
-                param.value = static_cast<u32>(paramIdxMap.at(std::get<u32>(param.value)));
-            } else if (param.type == xlink2::ValueReferenceType::String) {
-                param.value = info.strings.at(std::get<u32>(param.value));
-            } else if (param.type == xlink2::ValueReferenceType::Direct) {
-                const auto def = mPDT.getUserParam(param.index);
-                mDirectValues[std::get<u32>(param.value)].type.e = def.getType();
+            switch (param.type) {
+                case xlink2::ValueReferenceType::ArrangeParam:
+                    param.value = static_cast<u32>(paramIdxMap.at(std::get<u32>(param.value)));
+                    break;
+                case xlink2::ValueReferenceType::String:
+                    param.value = info.strings.at(std::get<u32>(param.value));
+                    break;
+                case xlink2::ValueReferenceType::Direct: {
+                    const auto def = mPDT.getUserParam(param.index);
+                    mDirectValues[std::get<u32>(param.value)].type.e = def.getType();
+                    break;
+                }
+                default: break;
             }
         }
     }
@@ -270,20 +296,28 @@ bool System::initialize(void* data, size_t size) {
     // update arrange params to use indices instead of offsets
     for (auto& param : mAssetParams) {
         for (auto& p : param.params) {
-            if (p.type == xlink2::ValueReferenceType::ArrangeParam) {
-                p.value = static_cast<u32>(paramIdxMap.at(std::get<u32>(p.value)));
-            } else if (p.type == xlink2::ValueReferenceType::String) {
-                p.value = info.strings.at(std::get<u32>(p.value));
+            switch (p.type) {
+                case xlink2::ValueReferenceType::ArrangeParam:
+                    p.value = static_cast<u32>(paramIdxMap.at(std::get<u32>(p.value)));
+                    break;
+                case xlink2::ValueReferenceType::String:
+                    p.value = info.strings.at(std::get<u32>(p.value));
+                    break;
+                default: break;
             }
         }
     }
 
     for (auto& param : mTriggerOverwriteParams) {
         for (auto& p : param.params) {
-            if (p.type == xlink2::ValueReferenceType::ArrangeParam) {
-                p.value = static_cast<u32>(paramIdxMap.at(std::get<u32>(p.value)));
-            } else if (p.type == xlink2::ValueReferenceType::String) {
-                p.value = info.strings.at(std::get<u32>(p.value));
+            switch (p.type) {
+                case xlink2::ValueReferenceType::ArrangeParam:
+                    p.value = static_cast<u32>(paramIdxMap.at(std::get<u32>(p.value)));
+                    break;
+                case xlink2::ValueReferenceType::String:
+                    p.value = info.strings.at(std::get<u32>(p.value));
+                    break;
+                default: break;
             }
         }
     }

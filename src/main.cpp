@@ -11,8 +11,8 @@
 
 #define MAX_FILEPATH 0x1000
 
-const std::string parseInput(int argc, char** argv, s32 index) {
-    static std::string null_string = "";
+static std::string parseInput(int argc, char** argv, s32 index) {
+    static std::string null_string;
 
     if (argc < 2 + index) {
         return null_string;
@@ -30,13 +30,13 @@ int main(int argc, char** argv) {
 
     const std::string opt = parseInput(argc, argv, 0);
 
-    if (opt == "" || opt == "-h" || opt == "--help") {
+    if (opt.empty() || opt == "-h" || opt == "--help") {
         constexpr std::string_view helpMessage = \
         "XLink2 Resource File Conversion Tool\n"
         "-----------------------------------------------------------------------------------------\n"
         "Usage:\n"
         "Converting XLNK to YAML (final option is optional, include if decompression is desired)\n"
-        "  --export [path_to_xlink_file] [output_yaml_path] [path_to_zsdic_pack]\n"
+        "  r--export [path_to_xlink_file] [output_yaml_path] [path_to_zsdic_pack]\n"
         "Converting YAML to XLNK (final option is optional, include if compression is desired)\n"
         "  --import [path_to_yaml] [output_xlink_path] [path_to_zsdic_pack]";
         std::cout << helpMessage;
@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
         const std::string outputPath = parseInput(argc, argv, 2);
         const std::string dictPath = parseInput(argc, argv, 3);
 
-        if (dictPath == "") {
+        if (dictPath.empty()) {
             std::vector<u8> buffer{};
             util::loadFile(filepath, buffer);
 
@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
         const std::string outputPath = parseInput(argc, argv, 2);
         const std::string dictPath = parseInput(argc, argv, 3);
 
-        if (dictPath == "") {
+        if (dictPath.empty()) {
             std::vector<u8> buffer{};
             util::loadFile(filepath, buffer);
 
@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
         const std::string dictPath = parseInput(argc, argv, 3);
 
 
-        if (dictPath == "") {
+        if (dictPath.empty()) {
             std::vector<u8> buffer{};
             util::loadFile(filepath, buffer);
 

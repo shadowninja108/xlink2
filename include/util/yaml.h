@@ -110,13 +110,15 @@ const std::optional<T> ParseScalarKeyAs(const ryml::ConstNodeRef& node) {
     return std::nullopt;
 }
 
-class ParseError : public std::runtime_error {
+class ParseError final : public std::runtime_error {
 public:
+  ParseError() = delete;
   using std::runtime_error::runtime_error;
 };
 
-class RymlError : public std::runtime_error {
+class RymlError final : public std::runtime_error {
 public:
+  RymlError() = delete;
   using std::runtime_error::runtime_error;
 };
 

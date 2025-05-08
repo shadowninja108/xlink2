@@ -10,19 +10,37 @@ enum class ContainerType {
     Random2 = 2,
     Blend = 3,
     Sequence = 4,
-    Grid = 5,
-    Jump = 6,
-    Mono = 7, // not a valid type within the file - this is the type used for assets
+    
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
+    Grid,
+#endif
+#if XLINK_TARGET_IS_TOTK
+    Jump,
+#endif
+    Mono, // not a valid type within the file - this is the type used for assets
 };
 
 struct ResContainerParam {
-    u8 type;
+
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
+    using ContainerTypePrimitive = u8;
+#elif XLINK_TARGET_IS_BLITZ
+    using ContainerTypePrimitive = ContainerType;
+#endif
+
+    ContainerTypePrimitive type;
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
     bool isNotBlendAll; // blend by default blends all child containers but this blends between two specific ones based on a value
     bool isNeedObserve; // updated at runtime, just ignore
     u8 unk; // probably just padding unless I missed where it's used
+#endif
+
     s32 childStartIdx;
     s32 childEndIdx;
+
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
     char padding[4];
+#endif
 
     ContainerType getType() const {
         return static_cast<ContainerType>(type);
@@ -30,11 +48,18 @@ struct ResContainerParam {
 };
 
 struct ResSwitchContainerParam : public ResContainerParam {
-    u64 actionSlotNameOffset;
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
+    TargetPointer actionSlotNameOffset;
     s32 _00;
     s16 propertyIndex;
     bool isGlobal;
     bool isActionTrigger; // matches by action slot name + action hash instead of by property (only Switch and not Blend)
+#elif XLINK_TARGET_IS_BLITZ
+    TargetPointer actionSlotNameOffset;
+    s32 watchPropertyId;
+    s16 propertyIndex;
+    bool isGlobal;
+#endif
 };
 
 struct ResRandomContainerParam : public ResContainerParam {};
@@ -43,15 +68,15 @@ struct ResRandomContainerParam2 : public ResRandomContainerParam {};
 
 struct ResBlendContainerParam : public ResContainerParam {};
 
-struct ResBlendContainerParam2 : public ResSwitchContainerParam {};
 
 struct ResSequenceContainerParam : public ResContainerParam {};
 
 // like a Switch but with two properties instead of one
 // only for use with enums
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
 struct ResGridContainerParam : public ResContainerParam {
-    u64 propertyNameOffset1;
-    u64 propertyNameOffset2;
+    TargetPointer propertyNameOffset1;
+    TargetPointer propertyNameOffset2;
     s16 propertyIndex1;
     s16 propertyIndex2;
     u16 flags;
@@ -72,6 +97,11 @@ struct ResGridContainerParam : public ResContainerParam {
     }
 };
 
+struct ResBlendContainerParam2 : public ResSwitchContainerParam {};
+#endif
+
+#if XLINK_TARGET_IS_TOTK
 struct ResJumpContainerParam : public ResContainerParam {};
+#endif
 
 } // namespace xlink2

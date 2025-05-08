@@ -24,7 +24,7 @@ class ParamDefine {
 public:
     ParamDefine() = default;
 
-    void initialize(const xlink2::ResParamDefine* param, const std::unordered_map<u64, std::string_view>& strings);
+    void initialize(const xlink2::ResParamDefine* param, const std::unordered_map<TargetPointer, std::string_view>& strings);
 
     const std::string_view& getName() const {
         return mName;
@@ -78,45 +78,45 @@ public:
     static constexpr s32 sSystemELinkUserParamCount = 0;
     static constexpr s32 sSystemSLinkUserParamCount = 8;
 
-    const ParamDefine& getUserParam(s32) const;
-    ParamDefine& getUserParam(s32);
+    const ParamDefine& getUserParam(size_t) const;
+    ParamDefine& getUserParam(size_t);
 
-    const ParamDefine& getCustomUserParam(s32) const;
-    ParamDefine& getCustomUserParam(s32);
+    const ParamDefine& getCustomUserParam(size_t) const;
+    ParamDefine& getCustomUserParam(size_t);
 
-    const ParamDefine& getAssetParam(s32) const;
-    ParamDefine& getAssetParam(s32);
+    const ParamDefine& getAssetParam(size_t) const;
+    ParamDefine& getAssetParam(size_t);
 
-    const ParamDefine& getUserAssetParam(s32) const;
-    ParamDefine& getUserAssetParam(s32);
+    const ParamDefine& getUserAssetParam(size_t) const;
+    ParamDefine& getUserAssetParam(size_t);
 
-    const ParamDefine& getTriggerParam(s32) const;
-    ParamDefine& getTriggerParam(s32);
+    const ParamDefine& getTriggerParam(size_t) const;
+    ParamDefine& getTriggerParam(size_t);
 
-    const ParamDefine& getParam(s32 index, ParamType type) const;
-    ParamDefine& getParam(s32 index, ParamType type);
+    const ParamDefine& getParam(size_t index, ParamType type) const;
+    ParamDefine& getParam(size_t index, ParamType type);
 
     void printParams() const;
 
-    u32 getUserParamCount() const {
+    size_t getUserParamCount() const {
         return mUserParams.size();
     }
 
-    u32 getAssetParamCount() const {
+    size_t getAssetParamCount() const {
         return mAssetParams.size();
     }
 
-    u32 getTriggerParamCount() const {
+    size_t getTriggerParamCount() const {
         return mTriggerParams.size();
     }
 
-    s32 searchParamIndex(const std::string_view, ParamType) const;
+    s32 searchParamIndex(std::string_view, ParamType) const;
 
     void dumpYAML(LibyamlEmitterWithStorage<std::string>&, bool exportStrings = false) const;
     bool loadYAML(const ryml::ConstNodeRef&);
 
-    const std::string_view addString(const std::string s) {
-        return std::move(*mStrings.insert(std::move(s)).first);
+    std::string_view addString(const std::string s) {
+        return std::move(*mStrings.insert(s).first);
     }
 
     friend class Serializer;

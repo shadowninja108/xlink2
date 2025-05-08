@@ -16,9 +16,13 @@ bool ResourceAccessor::load(void* data) {
     }
 
     mUserHashArray = reinterpret_cast<u32*>(reinterpret_cast<uintptr_t>(data) + sizeof(xlink2::ResourceHeader));
-    mUserOffsetArray = reinterpret_cast<u64*>(util::align(reinterpret_cast<uintptr_t>(mUserHashArray + mHeader->numUsers), 8));
+    mUserOffsetArray = reinterpret_cast<TargetPointer*>(
+        util::align(reinterpret_cast<uintptr_t>(mUserHashArray + mHeader->numUsers), sizeof(TargetPointer))
+    );
 
-    mParamDefineTable = reinterpret_cast<xlink2::ResParamDefineTableHeader*>(util::align(reinterpret_cast<uintptr_t>(mUserOffsetArray + mHeader->numUsers), 8));
+    mParamDefineTable = reinterpret_cast<xlink2::ResParamDefineTableHeader*>(
+        util::align(reinterpret_cast<uintptr_t>(mUserOffsetArray + mHeader->numUsers), sizeof(TargetPointer))
+    );
     mUserParams = reinterpret_cast<xlink2::ResParamDefine*>(mParamDefineTable + 1); // (uintptr_t)pdt + sizeof(pdt)
     mAssetParams = mUserParams + mParamDefineTable->numUserParams;
     mTriggerParams = mAssetParams + mParamDefineTable->numAssetParams;
@@ -26,7 +30,7 @@ bool ResourceAccessor::load(void* data) {
 
     mTriggerOverwriteParamTable = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(data) + mHeader->triggerOverwriteTablePos);
 
-    mLocalPropertyNameRefTable = reinterpret_cast<u64*>(reinterpret_cast<uintptr_t>(data) + mHeader->localPropertyNameRefTablePos);
+    mLocalPropertyNameRefTable = reinterpret_cast<TargetPointer*>(reinterpret_cast<uintptr_t>(data) + mHeader->localPropertyNameRefTablePos);
     mLocalPropertyEnumNameRefTable = mLocalPropertyNameRefTable + mHeader->numLocalPropertyNameRefs;
 
     mExRegion = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(data) + mHeader->exRegionPos);

@@ -3,7 +3,7 @@
 namespace util {
 
 constexpr std::array<u32, 0x100> initializeCRC32Table() {
-    std::array<u32, 0x100> table;
+    std::array<u32, 0x100> table{};
 
     for (u32 i = 0; i < table.size(); ++i) {
         u32 value = i;

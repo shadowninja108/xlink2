@@ -6,6 +6,11 @@
 
 namespace xlink2 {
 
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
+    using CompareTypePrimitive = u8;
+#else
+    using CompareTypePrimitive = u32;
+#endif
 enum class CompareType {
     Equal = 0,
     GreaterThan = 1,
@@ -15,6 +20,11 @@ enum class CompareType {
     NotEqual = 5,
 };
 
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
+using PropertyTypePrimitive = u8;
+#else
+    using PropertyTypePrimitive = u32;
+#endif
 enum class PropertyType {
     Enum = 0,
     S32 = 1,
@@ -26,11 +36,10 @@ enum class PropertyType {
 };
 
 struct ResProperty {
-    u64 nameOffset;
+    TargetPointer nameOffset;
     u32 isGlobal;
     s32 triggerStartIdx;
     s32 triggerEndIdx;
-    char padding[4];
 };
 
 } // namespace xlink2

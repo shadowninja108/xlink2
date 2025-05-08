@@ -24,9 +24,10 @@ struct ResCondition {
     }
 };
 
-struct ResSwitchCondition : public ResCondition {
-    u8 propertyType;
-    u8 compareType;
+    struct ResSwitchCondition : public ResCondition {
+        PropertyTypePrimitive propertyType;
+        CompareTypePrimitive compareType;
+#if XLINK_TARGET_IS_TOTK || XLINK_TARGET_IS_THUNDER
     bool solved; // internal for use at runtime, just ignore
     bool isGlobal;
     union {
@@ -34,11 +35,28 @@ struct ResSwitchCondition : public ResCondition {
         s32 enumValue; // index for local, value for global
     };
     union {
+        u32 u;
         s32 i;
         f32 f;
         bool b;
     } value;
-    u64 enumNameOffset;
+    TargetPointer enumNameOffset;
+#elif XLINK_TARGET_IS_BLITZ
+    /* SmallValue */
+    union {
+        u32 u;
+        s32 i;
+        f32 f;
+        bool b;
+    } value;
+    /* LocalPropertyEnumNameIdx */
+    union {
+        u16 actionHash;
+        s16 enumValue; // index for local, value for global
+    };
+    bool solved; // internal for use at runtime, just ignore
+    bool isGlobal;
+#endif
 
     PropertyType getPropType() const {
         return static_cast<PropertyType>(propertyType);
@@ -60,7 +78,6 @@ struct ResBlendCondition : public ResCondition {
     float max;
     u8 blendTypeToMax;
     u8 blendTypeToMin;
-    char padding[2];
 
     BlendType getBlendTypeToMax() const {
         return static_cast<BlendType>(blendTypeToMax);

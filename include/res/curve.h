@@ -14,7 +14,7 @@ struct ResCurveCallTable {
     u16 numCurvePoint;
     u16 curveType;
     u16 isGlobal;
-    u64 propNameOffset;
+    TargetPointer propNameOffset;
     s32 unk;
     s16 propertyIndex;
     u16 unk2;

@@ -7,27 +7,27 @@
 
 namespace banana {
 
-void ParamDefine::initialize(const xlink2::ResParamDefine* param, const std::unordered_map<u64, std::string_view>& strings) {
+void ParamDefine::initialize(const xlink2::ResParamDefine* param, const std::unordered_map<TargetPointer, std::string_view>& strings) {
     mName = strings.at(param->nameOffset);
     mType = param->getType();
     switch (mType) {
         case xlink2::ParamType::Int:
-            mDefaultValue = std::bit_cast<s32, u32>(static_cast<u32>(param->defaultValue & 0xffffffff));
+            mDefaultValue = std::bit_cast<s32, u32>(static_cast<u32>(param->defaultValue));
             break;
         case xlink2::ParamType::Float:
-            mDefaultValue = static_cast<f32>(std::bit_cast<f64, u64>(param->defaultValue));
+            mDefaultValue = std::bit_cast<f32, u32>(static_cast<u32>(param->defaultValue));
             break;
         case xlink2::ParamType::Bool:
-            mDefaultValue = (param->defaultValue & 0xffffffff) != 0;
+            mDefaultValue = param->defaultValue != 0;
             break;
         case xlink2::ParamType::Enum:
-            mDefaultValue = static_cast<u32>(param->defaultValue & 0xffffffff);
+            mDefaultValue = static_cast<u32>(param->defaultValue);
             break;
         case xlink2::ParamType::String:
             mDefaultValue = strings.at(param->defaultValue);
             break;
         case xlink2::ParamType::Bitfield:
-            mDefaultValue = static_cast<u32>(param->defaultValue & 0xffffffff);
+            mDefaultValue = static_cast<u32>(param->defaultValue);
             break;
         default:
             throw ResourceError(std::format("Invalid ParamDefine type: {}", static_cast<u32>(mType)));
@@ -73,9 +73,9 @@ bool ParamDefineTable::initialize(const ResourceAccessor& accessor) {
     // each define will just store a string_view of the string while the PDT will store a set of all strings
     const char* nameTable = accessor.getParamDefineName(0);
     const char* pos = nameTable;
-    const char* end = reinterpret_cast<const char*>(accessor.getTriggerOverwriteParam(0));
+    const auto end = reinterpret_cast<const char*>(accessor.getTriggerOverwriteParam(0));
 
-    std::unordered_map<u64, std::string_view> offsetMap{};
+    std::unordered_map<TargetPointer, std::string_view> offsetMap{};
 
     do {
         auto res = mStrings.insert(std::string(pos));
@@ -84,10 +84,10 @@ bool ParamDefineTable::initialize(const ResourceAccessor& accessor) {
 #else
         offsetMap.emplace(reinterpret_cast<ptrdiff_t>(pos - nameTable), std::string_view(*res.first));
 #endif
-        pos += (*res.first).size() + 1;
+        pos += res.first->size() + 1;
     } while (pos < end && *pos);
 
-    auto pdt = accessor.getParamDefineTable();
+    const auto pdt = accessor.getParamDefineTable();
 
     mSystemAssetParamCount = pdt->numAssetParams - pdt->numUserAssetParams;
 
@@ -129,45 +129,45 @@ void ParamDefineTable::printParams() const {
     }
 }
 
-const ParamDefine& ParamDefineTable::getUserParam(s32 index) const {
+const ParamDefine& ParamDefineTable::getUserParam(size_t index) const {
     return mUserParams[index];
 }
-ParamDefine& ParamDefineTable::getUserParam(s32 index) {
+ParamDefine& ParamDefineTable::getUserParam(size_t index) {
     return mUserParams[index];
 }
 
-const ParamDefine& ParamDefineTable::getCustomUserParam(s32 index) const {
+const ParamDefine& ParamDefineTable::getCustomUserParam(size_t index) const {
     return mUserParams[mSystemUserParamCount + index];
 }
-ParamDefine& ParamDefineTable::getCustomUserParam(s32 index) {
+ParamDefine& ParamDefineTable::getCustomUserParam(size_t index) {
     return mUserParams[mSystemUserParamCount + index];
 }
 
-const ParamDefine& ParamDefineTable::getAssetParam(s32 index) const {
+const ParamDefine& ParamDefineTable::getAssetParam(size_t index) const {
     return mAssetParams[index];
 }
-ParamDefine& ParamDefineTable::getAssetParam(s32 index) {
+ParamDefine& ParamDefineTable::getAssetParam(size_t index) {
     return mAssetParams[index];
 }
 
-const ParamDefine& ParamDefineTable::getUserAssetParam(s32 index) const {
+const ParamDefine& ParamDefineTable::getUserAssetParam(size_t index) const {
     return mAssetParams[mSystemAssetParamCount + index];
 }
-ParamDefine& ParamDefineTable::getUserAssetParam(s32 index) {
+ParamDefine& ParamDefineTable::getUserAssetParam(size_t index) {
     return mAssetParams[mSystemAssetParamCount + index];
 }
 
-const ParamDefine& ParamDefineTable::getTriggerParam(s32 index) const {
+const ParamDefine& ParamDefineTable::getTriggerParam(size_t index) const {
     return mTriggerParams[index];
 }
-ParamDefine& ParamDefineTable::getTriggerParam(s32 index) {
+ParamDefine& ParamDefineTable::getTriggerParam(size_t index) {
     return mTriggerParams[index];
 }
 
-const ParamDefine& ParamDefineTable::getParam(s32 index, ParamType type) const {
+const ParamDefine& ParamDefineTable::getParam(size_t index, ParamType type) const {
     return (type == ParamType::USER) ? mUserParams[index] : (type == ParamType::ASSET ? mAssetParams[index] : mTriggerParams[index]);
 }
-ParamDefine& ParamDefineTable::getParam(s32 index, ParamType type) {
+ParamDefine& ParamDefineTable::getParam(size_t index, ParamType type) {
     return (type == ParamType::USER) ? mUserParams[index] : (type == ParamType::ASSET ? mAssetParams[index] : mTriggerParams[index]);
 }
 
@@ -243,28 +243,28 @@ void ParamDefineTable::dumpYAML(LibyamlEmitterWithStorage<std::string>& emitter,
     emitter.EmitInt(mSystemAssetParamCount);
     {
         emitter.EmitString("UserParamDefines");
-        LibyamlEmitter::MappingScope scope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
+        LibyamlEmitter::MappingScope paramScope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
         for (const auto& define : mUserParams) {
             define.dumpYAML(emitter);
         }
     }
     {
         emitter.EmitString("AssetParamDefines");
-        LibyamlEmitter::MappingScope scope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
+        LibyamlEmitter::MappingScope paramScope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
         for (const auto& define : mAssetParams) {
             define.dumpYAML(emitter);
         }
     }
     {
         emitter.EmitString("TriggerParamDefines");
-        LibyamlEmitter::MappingScope scope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
+        LibyamlEmitter::MappingScope paramScope{emitter, {}, YAML_BLOCK_MAPPING_STYLE};
         for (const auto& define : mTriggerParams) {
             define.dumpYAML(emitter);
         }
     }
     if (exportStrings) {
         emitter.EmitString("Strings");
-        LibyamlEmitter::SequenceScope scope{emitter, {}, YAML_BLOCK_SEQUENCE_STYLE};
+        LibyamlEmitter::SequenceScope paramScope{emitter, {}, YAML_BLOCK_SEQUENCE_STYLE};
         for (const auto& str : mStrings) {
             emitter.EmitString(str);
         }
@@ -306,7 +306,7 @@ void ParamDefine::loadYAML(const ryml::ConstNodeRef& node, const std::string_vie
     }
 
     mType = xlink2::ParamType::String;
-    mDefaultValue = std::move(pdt.addString(std::get<std::string>(value)));
+    mDefaultValue = pdt.addString(std::get<std::string>(value));
 }
 
 bool ParamDefineTable::loadYAML(const ryml::ConstNodeRef& node) {
@@ -329,8 +329,8 @@ bool ParamDefineTable::loadYAML(const ryml::ConstNodeRef& node) {
     mUserParams.resize(userParams.num_children());
 
     for (u32 i = 0; const auto& param : userParams) {
-        auto res = mStrings.insert({param.key().data(), param.key().size()});
-        mUserParams[i].loadYAML(param, *res.first, *this);
+        auto [it, success] = mStrings.insert({param.key().data(), param.key().size()});
+        mUserParams[i].loadYAML(param, *it, *this);
         ++i;
     }
 
@@ -343,8 +343,8 @@ bool ParamDefineTable::loadYAML(const ryml::ConstNodeRef& node) {
     mAssetParams.resize(assetParams.num_children());
 
     for (u32 i = 0; const auto& param : assetParams) {
-        auto res = mStrings.insert({param.key().data(), param.key().size()});
-        mAssetParams[i].loadYAML(param, *res.first, *this);
+        auto [it, success] = mStrings.insert({param.key().data(), param.key().size()});
+        mAssetParams[i].loadYAML(param, *it, *this);
         ++i;
     }
 
@@ -357,8 +357,8 @@ bool ParamDefineTable::loadYAML(const ryml::ConstNodeRef& node) {
     mTriggerParams.resize(triggerParams.num_children());
 
     for (u32 i = 0; const auto& param : triggerParams) {
-        auto res = mStrings.insert({param.key().data(), param.key().size()});
-        mTriggerParams[i].loadYAML(param, *res.first, *this);
+        auto [it, success] = mStrings.insert({param.key().data(), param.key().size()});
+        mTriggerParams[i].loadYAML(param, *it, *this);
         ++i;
     }
 

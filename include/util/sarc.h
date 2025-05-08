@@ -10,7 +10,7 @@
 namespace util {
 
 constexpr u32 makeMagic(const char (&str)[5]) {
-    return str[0] | (str[1] << 0x8) | (str[2] << 0x10) | (str[3] << 0x18);
+    return static_cast<u32>(str[0] | (str[1] << 0x8) | (str[2] << 0x10) | (str[3] << 0x18));
 }
 
 const u32 cSARCMagic = makeMagic("SARC");

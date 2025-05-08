@@ -21,17 +21,17 @@ class Serializer;
 class System;
 
 struct InitInfo {
-    std::unordered_map<u64, std::string_view> strings{};
-    std::unordered_map<u64, s32> triggerParams{};
-    std::unordered_map<u64, s32> assetParams{};
+    std::unordered_map<TargetPointer, std::string_view> strings{};
+    std::unordered_map<TargetPointer, s32> triggerParams{};
+    std::unordered_map<TargetPointer, s32> assetParams{};
 };
 
 class User {
 public:
     bool initialize(System* sys, const xlink2::ResUserHeader* res,
                     const InitInfo& info,
-                    const std::unordered_map<u64, s32>& conditions,
-                    std::set<u64>& arrangeParams);
+                    const std::unordered_map<TargetPointer, s32>& conditions,
+                    std::set<TargetPointer>& arrangeParams);
 
     friend class Serializer;
     friend class System;

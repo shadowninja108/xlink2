@@ -24,20 +24,21 @@ struct ResourceHeader {
     s32 numParams;
     s32 numAssetParams;
     s32 numTriggerOverwriteParams;
-    u64 triggerOverwriteTablePos;
-    u64 localPropertyNameRefTablePos;
+    TargetPointer triggerOverwriteTablePos;
+    TargetPointer localPropertyNameRefTablePos;
     s32 numLocalPropertyNameRefs;
     s32 numLocalPropertyEnumNameRefs;
     s32 numDirectValues;
     s32 numRandom;
     s32 numCurves;
     s32 numCurvePoints;
-    u64 exRegionPos;
+    TargetPointer exRegionPos;
     s32 numUsers;
-    char padding[4];
-    u64 conditionTablePos;
-    u64 nameTablePos;
+    TargetPointer conditionTablePos;
+    TargetPointer nameTablePos;
 };
+#if XLINK_BITNESS == 64
 static_assert(sizeof(ResourceHeader) == 0x60);
+#endif
 
 } // namespace xlink2

@@ -51,7 +51,7 @@ bool loadFileWithDecomp(const std::string& path, std::vector<u8>& buffer, const 
 
     buffer.resize(decompressedSize);
 
-    if (dicts.size() == 0) {
+    if (dicts.empty()) {
         const size_t res = ZSTD_decompress(buffer.data(), buffer.size(), srcBuffer.data(), srcBuffer.size());
 
         return !ZSTD_isError(res);
@@ -87,7 +87,7 @@ bool loadFileWithDecomp(const std::string& path, std::vector<u8>& buffer, const 
 
 void writeFile(const std::string& path, const std::span<const u8>& data, bool compress, const std::span<const u8>& dict) {
     std::vector<u8> fileData{};
-    if (compress && dict.size() > 0) {
+    if (compress && !dict.empty()) {
         const size_t compressionBufferSize = ZSTD_compressBound(data.size());
         std::vector<u8> tempBuffer{};
         tempBuffer.resize(compressionBufferSize);

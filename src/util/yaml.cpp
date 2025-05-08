@@ -88,7 +88,7 @@ Scalar ParseScalar(const std::string_view tag, const std::string_view value, boo
     return value[0] == 't';
 
   // Floating-point conversions.
-  const bool is_possible_double = value.find(".") != std::string::npos;
+  const bool is_possible_double = value.find('.') != std::string::npos;
   if (tag_type == TagBasedType::Float || (!tag_type && is_possible_double && !is_quoted)) {
     if (IsInfinity(value))
       return std::numeric_limits<double>::infinity();
@@ -126,7 +126,7 @@ bool StringNeedsQuotes(const std::string_view value) {
   if (util::IsAnyOf(value, "true", "false"))
     return true;
 
-  const bool is_possible_double = value.find(".") != std::string::npos;
+  const bool is_possible_double = value.find('.') != std::string::npos;
   if (is_possible_double) {
     if (IsInfinity(value) || IsNegativeInfinity(value) || IsNaN(value))
       return true;
